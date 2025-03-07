@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Models\transaksi; // Sesuaikan dengan model pesanan
 use App\Models\harga; // Sesuaikan dengan model harga
-use App\Models\user; // Sesuaikan dengan model pengguna
+use App\Models\User; // Sesuaikan dengan model pengguna
 
 class WebhookController extends Controller
 {
