@@ -1,5 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/laundry.sasak.xyz/
+    - export DEPLOYPATH=/home/qlljlhql/laundry.sasak.xyz/
     - cp -r * $DEPLOYPATH
