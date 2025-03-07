@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/public_html/laundry.sasak.xyz/ 
+    - cp -r * $DEPLOYPATH
