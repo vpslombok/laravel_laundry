@@ -167,7 +167,7 @@
                     </div>
                   </</div>
                 </div>
-                <button type="submit" class="btn btn-primary" disabled>Update</button>
+                <button type="submit" class="btn btn-primary">Update</button>
                 <a href="/home" class="btn btn-info">Batal</a>
               </form>
             </div>
