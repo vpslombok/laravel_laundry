@@ -15,7 +15,6 @@ use App\Jobs\DoneCustomerJob;
 use App\Jobs\OrderCustomerJob;
 use App\Notifications\{OrderMasuk, OrderSelesai};
 use GuzzleHttp\Client;
-use Illuminate\Support\Facades\Http;
 
 class PelayananController extends Controller
 
@@ -162,38 +161,40 @@ class PelayananController extends Controller
           dispatch(new OrderCustomerJob($data));
         }
 
-        // Kirim notifikasi via WhatsApp menggunakan API dengan Guzzle
+        // Kirim notifikasi via WhatsApp menggunakan API
         try {
           if (setNotificationWhatsappOrderSelesai(1) == 1) {
-            $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message'; // URL API WhatsApp
+            $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url; // URL API WhatsApp
             $apikey = notifications_setting::where('id', 1)->first()->api_key; // Mendapatkan API Key dari basis data
 
-            $client = new \GuzzleHttp\Client();
-            $response = $client->request('POST', $waApiUrl, [
-              'json' => [
-                'api_key'  => $apikey,
-                'sender'   => "6285333640674", // Nomor perangkat Anda
-                'number'   => '62' . ltrim($order->customers->no_telp ?? '', '0'), // Format nomor penerima
-                'message'  => "Terima kasih, " . ($order->customers->name ?? 'Pelanggan') .
-                  ". Laundryan Anda sudah kami terima dengan nomor invoice " . ($order->invoice ?? 'N/A') .
-                  ". Kami akan segera memproses laundryan Anda. Silakan tunggu informasi lebih lanjut. Anda dapat memantau status laundryan Anda melalui website kami di " . url('/'),
-                'footer'   => "Terima kasih.."
-              ]
-            ]);
+            $data = [
+              'api_key' => $apikey,
+              'sender' => '6285333640674', // Nomor perangkat Anda
+              'number' => '62' . ltrim($order->customers->no_telp, '0'), // Nomor penerima
+              'message' => "Terima kasih, " . $order->customer . ". Laundryan Anda sudah kami terima dengan nomor invoice " . $order->invoice . ". Kami akan segera memproses laundryan Anda. Silakan tunggu informasi lebih lanjut. Anda dapat memantau status laundryan Anda melalui website kami di " . url('/')
+            ];
 
-            $responseData = json_decode($response->getBody()->getContents(), true);
-            if (isset($responseData['status']) && $responseData['status'] === false) {
-              return response()->json(['error' => $responseData['msg'], 'data' => $data]);
-            } else if (!isset($responseData['status']) || $responseData['status'] !== 'true') {
-              Session::flash('error', 'Respon API tidak valid: ' . json_encode($responseData));
-              DB::rollBack();
-              return redirect()->back();
+            $ch = curl_init($waApiUrl);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            if ($response === false) {
+              return response()->json(['error' => 'Gagal menghubungi server WhatsApp. Silakan coba lagi nanti.'], 500);
             } else {
-              DB::commit();
-              Session::flash('success', 'Order Berhasil Ditambah!');
-              return redirect('pelayanan');
+              $responseData = json_decode($response, true);
+              if (!isset($responseData['status']) || $responseData['status'] !== 'success') {
+                Session::flash('error', 'Respon API tidak valid: ' . json_encode($responseData));
+              }
             }
           }
+
+          DB::commit();
+          Session::flash('success', 'Order Berhasil Ditambah!');
+          return redirect('pelayanan');
         } catch (Exception $e) {
           DB::rollBack();
           Session::flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
@@ -327,22 +328,18 @@ class PelayananController extends Controller
         // Notifikasi WhatsApp
         if (setNotificationWhatsappOrderSelesai(1) == 1) {
           $nameCustomer = $transaksi->customers->name; // get name customer
-          $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message'; // URL API WhatsApp dengan tambahan /send-message
+          $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-media'; // URL API WhatsApp dengan tambahan /send-media
           $apiKey = notifications_setting::where('id', 1)->first()->api_key; // get API Key dari database
+          // Generate nota dalam bentuk gambar
+          $fileUrl = $this->generateNotaImage($transaksi);
+
           $data = [
             'api_key' => $apiKey,
             'sender' => '6285333640674', // Nomor perangkat kamu
             'number' => '62' . ltrim($transaksi->customers->no_telp, '0'),
-            'message' => "Halo Kak $nameCustomer 😊
-Pesanan laundry Kakak dengan Invoice: $transaksi->invoice telah selesai dan sudah bisa diambil! Berikut detail pesanan:
-📅 Tanggal Transaksi: $transaksi->tgl_transaksi
-⚖ Berat Cucian: $transaksi->kg Kg
-⏳ Lama Pengerjaan: 4 hari
-💰 Total Biaya: Rp " . number_format($transaksi->harga_akhir, 0, ',', '.') . "
-💳 Status Pembayaran: $transaksi->status_payment
-Jika sudah melakukan pembayaran, silakan datang ke tempat kami untuk mengambil laundry. Jika belum, pembayaran bisa dilakukan saat pengambilan.
-
-Terima kasih sudah menggunakan layanan kami! Semoga hari Kakak menyenangkan! 🌟"
+            'media_type' => 'image',
+            'caption' => "Halo Kak *{$transaksi->customers->name}*, berikut nota transaksi laundry Anda dengan Invoice *{$transaksi->invoice}*",
+            'url' => $fileUrl // URL gambar nota
           ];
 
           // Kirim data menggunakan cURL
@@ -352,7 +349,7 @@ Terima kasih sudah menggunakan layanan kami! Semoga hari Kakak menyenangkan! �
           curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
           curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
           $response = curl_exec($ch);
-          if ($response === false) {
+          if($response === false) {
             $error = curl_error($ch);
             echo "cURL Error: " . $error;
           }
