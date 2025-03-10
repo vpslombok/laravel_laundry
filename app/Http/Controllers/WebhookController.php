@@ -66,10 +66,7 @@ class WebhookController extends Controller
                     // Awal teks
                     $pesan = "*Daftar List Laundry Anda*\n";
                     $pesan .= "👤 *Nama:* {$user->name}\n";
-                    $pesan .= "--------------------------------------------------------------\n";
-
-                    // List untuk buttons
-                    $buttons = [];
+                    $pesan .= "-------------------------------------------------------------\n";
 
                     // Looping daftar laundry
                     foreach ($listLaundry as $laundry) {
@@ -87,45 +84,17 @@ class WebhookController extends Controller
                         };
 
                         $pesan .= "🔄 *Status:* {$statusOrder}\n";
-                        $pesan .= "--------------------------------------------------------------\n";
-
-                        // Format buttons sesuai WhatsApp API
-                        $buttons[] = [
-                            "buttonId" => "copy_{$laundry->invoice}",
-                            "buttonText" => ["displayText" => "📋 Copy Resi: {$laundry->invoice}"],
-                            "type" => 1
-                        ];
+                        $pesan .= "-------------------------------------------------------------\n";
                     }
 
                     // Tambahkan instruksi
                     $pesan .= "ℹ️ *Untuk cek detail laundry, silakan kirim nomor Resi.*";
 
-                    // Format pesan interactive buttons
-                    $message = [
-                        "text" => $pesan,
-                        "footer" => "Salin dan Paste Nomor Resi Untuk Melihat Status Dengan Lengkap ",
-                        "headerType" => 1,
-                        "buttons" => $buttons
-                    ];
-
-                    // Kirim sebagai pesan interactive button
-                    $respon = self::buttons($pesan, $buttons);
+                    $respon = self::text($pesan, true);
                 }
             }
         }
 
         echo $respon;
-    }
-
-    public static function buttons($pesan, $buttons)
-    {
-        $message = [
-            'text' => $pesan,
-            'footer' => "Salin dan Paste Nomor Resi Untuk Melihat Status Dengan Lengkap ",
-            'headerType' => 1,
-            'buttons' => $buttons
-        ];
-
-        return json_encode($message);
     }
 }
