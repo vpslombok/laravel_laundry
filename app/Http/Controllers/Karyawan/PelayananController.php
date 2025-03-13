@@ -10,7 +10,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\AddOrderRequest;
 use Illuminate\Support\Facades\Session;
-use App\Models\{transaksi, User, harga, DataBank, Notification, notifications_setting};
+use App\Models\{transaksi, User, harga, DataBank, Notification, notifications_setting, PageSettings};
 use App\Jobs\DoneCustomerJob;
 use App\Jobs\OrderCustomerJob;
 use App\Notifications\{OrderMasuk, OrderSelesai};
@@ -35,49 +35,58 @@ class PelayananController extends Controller
   private function generateNotaImage($transaksi)
   {
     // Buat canvas gambar
-    $img = imagecreatetruecolor(600, 800);
+    $img = imagecreatetruecolor(400, 600);
     $white = imagecolorallocate($img, 255, 255, 255);
     $black = imagecolorallocate($img, 0, 0, 0);
     $gray = imagecolorallocate($img, 200, 200, 200); // Warna untuk garis
 
     // Isi background putih
-    imagefilledrectangle($img, 0, 0, 600, 800, $white);
+    imagefilledrectangle($img, 0, 0, 400, 600, $white);
 
     // Cek apakah font ada
-    $font = realpath(public_path('storage/fonts/Poppins-Regular.ttf'));
+    $font = realpath(public_path('storage/fonts/Roboto-Regular.ttf'));
     if (!$font) {
       die("Path font tidak ditemukan!");
     }
 
     // Tambahkan header nota
-    imagettftext($img, 24, 0, 180, 50, $black, $font, "NOTA LAUNDRY");
+    $judul = PageSettings::first()->judul;
+    imagettftext($img, 14, 0, 10, 30, $black, $font, "Halo kak, " . $transaksi->customers->name);
+    imagettftext($img, 12, 0, 10, 50, $black, $font, date('d/m/Y H:i', strtotime($transaksi->tgl_transaksi)));
 
     // Tambahkan garis pemisah
-    imageline($img, 50, 70, 550, 70, $gray);
+    imageline($img, 10, 60, 390, 60, $gray);
 
     // Tambahkan teks ke gambar (data transaksi)
-    $posY = 120; // Posisi Y awal
-    $lineSpacing = 40; // Jarak antar baris
+    $posY = 90;
+    $lineSpacing = 25;
 
-    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Invoice: " . $transaksi->invoice);
-    $posY += $lineSpacing;
-    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Nama    : " . $transaksi->customers->name);
-    $posY += $lineSpacing;
-    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Tanggal : " . $transaksi->tgl_transaksi);
-    $posY += $lineSpacing;
-    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Layanan : " . harga::where('id', $transaksi->harga_id)->first()->jenis);
-    $posY += $lineSpacing;
-    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Berat   : " . $transaksi->kg . " Kg");
-    $posY += $lineSpacing;
-    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Total   : Rp " . number_format($transaksi->harga_akhir, 0, ',', '.'));
-    $posY += $lineSpacing;
-    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Status  : " . $transaksi->status_payment);
+    imagettftext($img, 16, 0, 110, $posY, $black, $font, $judul);
+    $posY += 30;
 
-    // Tambahkan garis pemisah sebelum footer
-    imageline($img, 50, $posY + 30, 550, $posY + 30, $gray);
+    imagettftext($img, 12, 0, 20, $posY, $black, $font, "NO RESI   : " . $transaksi->invoice);
+    $posY += $lineSpacing;
+    imagettftext($img, 12, 0, 20, $posY, $black, $font, "NAMA      : " . $transaksi->customers->name);
+    $posY += $lineSpacing;
+    imagettftext($img, 12, 0, 20, $posY, $black, $font, "LAYANAN   : " . harga::where('id', $transaksi->harga_id)->first()->jenis);
+    $posY += $lineSpacing;
+    imagettftext($img, 12, 0, 20, $posY, $black, $font, "HARGA/KG  : Rp " . number_format(harga::where('id', $transaksi->harga_id)->first()->harga_per_kg, 0, ',', '.'));
+    $posY += $lineSpacing;
+    imagettftext($img, 12, 0, 20, $posY, $black, $font, "BERAT     : " . $transaksi->kg . " Kg");
+    $posY += $lineSpacing;
+    imagettftext($img, 12, 0, 20, $posY, $black, $font, "TOTAL     : Rp " . number_format($transaksi->harga_akhir, 0, ',', '.'));
+    $posY += $lineSpacing;
+    imagettftext($img, 12, 0, 20, $posY, $black, $font, "STATUS    : " . strtoupper($transaksi->status_payment));
 
-    // Tambahkan footer dengan ukuran yang sesuai
-    imagettftext($img, 14, 0, 180, $posY + 70, $black, $font, "Terima kasih telah menggunakan jasa kami!");
+    // Garis sebelum footer
+    imageline($img, 10, $posY + 20, 390, $posY + 20, $gray);
+    $posY += 40;
+
+    // Tambahkan footer
+    imagettftext($img, 12, 0, 40, $posY, $black, $font, "** Terima Kasih **");
+    $posY += 25;
+    imagettftext($img, 10, 0, 20, $posY, $black, $font, "Silakan ambil cucian Anda Berdasarkan Estimasi.");
+    $posY += 20;
 
     // Simpan gambar ke storage Laravel
     $fileName = 'nota_' . $transaksi->invoice . '.png';
@@ -88,10 +97,6 @@ class PelayananController extends Controller
     // Return URL gambar yang bisa diakses
     return asset('storage/' . $fileName);
   }
-
-
-
-
 
   public function histori()
   {
