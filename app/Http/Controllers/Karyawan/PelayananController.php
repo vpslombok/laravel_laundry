@@ -44,7 +44,7 @@ class PelayananController extends Controller
     imagefilledrectangle($img, 0, 0, 400, 600, $white);
 
     // Cek apakah font ada
-    $font = realpath(public_path('storage/fonts/Roboto-Regular.ttf'));
+    $font = realpath(public_path('storage/fonts/Poppins-Italic.ttf'));
     if (!$font) {
       die("Path font tidak ditemukan!");
     }
