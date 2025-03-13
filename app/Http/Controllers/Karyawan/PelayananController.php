@@ -38,25 +38,46 @@ class PelayananController extends Controller
     $img = imagecreatetruecolor(600, 800);
     $white = imagecolorallocate($img, 255, 255, 255);
     $black = imagecolorallocate($img, 0, 0, 0);
+    $gray = imagecolorallocate($img, 200, 200, 200); // Warna untuk garis
 
     // Isi background putih
     imagefilledrectangle($img, 0, 0, 600, 800, $white);
 
-    $font = realpath(public_path('storage/fonts/Poppins-BlackItalic.ttf'));
-
+    // Cek apakah font ada
+    $font = realpath(public_path('storage/fonts/Poppins-Regular.ttf'));
     if (!$font) {
       die("Path font tidak ditemukan!");
     }
 
+    // Tambahkan header nota
+    imagettftext($img, 24, 0, 180, 50, $black, $font, "NOTA LAUNDRY");
 
-    // Tambahkan teks ke gambar
-    imagettftext($img, 20, 0, 50, 50, $black, $font, "Invoice: " . $transaksi->invoice);
-    imagettftext($img, 18, 0, 50, 100, $black, $font, "Nama: " . $transaksi->customers->name);
-    imagettftext($img, 18, 0, 50, 150, $black, $font, "Tanggal: " . $transaksi->tgl_transaksi);
-    imagettftext($img, 18, 0, 50, 200, $black, $font, "Layanan: " . harga::where('id', $transaksi->harga_id)->first()->jenis);
-    imagettftext($img, 18, 0, 50, 250, $black, $font, "Berat: " . $transaksi->kg . " Kg");
-    imagettftext($img, 18, 0, 50, 300, $black, $font, "Total Biaya: Rp " . number_format($transaksi->harga_akhir, 0, ',', '.'));
-    imagettftext($img, 18, 0, 50, 350, $black, $font, "Status: " . $transaksi->status_payment);
+    // Tambahkan garis pemisah
+    imageline($img, 50, 70, 550, 70, $gray);
+
+    // Tambahkan teks ke gambar (data transaksi)
+    $posY = 120; // Posisi Y awal
+    $lineSpacing = 40; // Jarak antar baris
+
+    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Invoice: " . $transaksi->invoice);
+    $posY += $lineSpacing;
+    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Nama    : " . $transaksi->customers->name);
+    $posY += $lineSpacing;
+    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Tanggal : " . $transaksi->tgl_transaksi);
+    $posY += $lineSpacing;
+    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Layanan : " . harga::where('id', $transaksi->harga_id)->first()->jenis);
+    $posY += $lineSpacing;
+    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Berat   : " . $transaksi->kg . " Kg");
+    $posY += $lineSpacing;
+    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Total   : Rp " . number_format($transaksi->harga_akhir, 0, ',', '.'));
+    $posY += $lineSpacing;
+    imagettftext($img, 18, 0, 50, $posY, $black, $font, "Status  : " . $transaksi->status_payment);
+
+    // Tambahkan garis pemisah sebelum footer
+    imageline($img, 50, $posY + 30, 550, $posY + 30, $gray);
+
+    // Tambahkan footer dengan ukuran yang sesuai
+    imagettftext($img, 14, 0, 180, $posY + 70, $black, $font, "Terima kasih telah menggunakan jasa kami!");
 
     // Simpan gambar ke storage Laravel
     $fileName = 'nota_' . $transaksi->invoice . '.png';
@@ -67,6 +88,7 @@ class PelayananController extends Controller
     // Return URL gambar yang bisa diakses
     return asset('storage/' . $fileName);
   }
+
 
 
 
@@ -165,12 +187,10 @@ class PelayananController extends Controller
         try {
           if (setNotificationWhatsappOrderSelesai(1) == 1) {
             $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url; // URL API WhatsApp
-            $apikey = notifications_setting::where('id', 1)->first()->api_key; // Mendapatkan API Key dari basis data
+            // $apikey = notifications_setting::where('id', 1)->first()->api_key; // Mendapatkan API Key dari basis data
 
             $data = [
-              'api_key' => $apikey,
-              'sender' => '6285333640674', // Nomor perangkat Anda
-              'number' => '62' . ltrim($order->customers->no_telp, '0'), // Nomor penerima
+              'number' => $order->customers->no_telp, // Nomor penerima
               'message' => "Terima kasih, " . $order->customer . ". Laundryan Anda sudah kami terima dengan nomor invoice " . $order->invoice . ". Kami akan segera memproses laundryan Anda. Silakan tunggu informasi lebih lanjut. Anda dapat memantau status laundryan Anda melalui website kami di " . url('/')
             ];
 
@@ -187,7 +207,7 @@ class PelayananController extends Controller
             } else {
               $responseData = json_decode($response, true);
               if (!isset($responseData['status']) || $responseData['status'] !== 'success') {
-                Session::flash('error', 'Respon API tidak valid: ' . json_encode($responseData));
+                Session::flash('error', 'Respon API : ' . json_encode($responseData));
               }
             }
           }
@@ -327,35 +347,40 @@ class PelayananController extends Controller
 
         // Notifikasi WhatsApp
         if (setNotificationWhatsappOrderSelesai(1) == 1) {
-          $nameCustomer = $transaksi->customers->name; // get name customer
-          $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-media'; // URL API WhatsApp dengan tambahan /send-media
-          $apiKey = notifications_setting::where('id', 1)->first()->api_key; // get API Key dari database
-          // Generate nota dalam bentuk gambar
+          $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url; // URL API WhatsApp
           $fileUrl = $this->generateNotaImage($transaksi);
+          // $apiKey = notifications_setting::where('id', 1)->first()->api_key; // get API Key dari database
+          // Generate nota dalam bentuk gambar
 
           $data = [
-            'api_key' => $apiKey,
-            'sender' => '6285333640674', // Nomor perangkat kamu
-            'number' => '62' . ltrim($transaksi->customers->no_telp, '0'),
-            'media_type' => 'image',
-            'caption' => "Halo Kak *{$transaksi->customers->name}*, berikut nota transaksi laundry Anda dengan Invoice *{$transaksi->invoice}*",
-            'url' => $fileUrl // URL gambar nota
+            'number' =>  $transaksi->customers->no_telp,
+            'message' => "Halo Kak *{$transaksi->customers->name}*, berikut nota transaksi laundry Anda dengan Invoice *{$transaksi->invoice}*",
+            'file_url' => $fileUrl // URL gambar nota
           ];
 
-          // Kirim data menggunakan cURL
+          // Kirim data menggunakan cURL dengan melewati pemeriksaan SSL
           $ch = curl_init($waApiUrl);
           curl_setopt($ch, CURLOPT_POST, 1);
           curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
           curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
           curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+          curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Melewati pemeriksaan SSL
+
           $response = curl_exec($ch);
-          if($response === false) {
+          if ($response === false) {
             $error = curl_error($ch);
-            echo "cURL Error: " . $error;
+            \Log::error('Gagal menghubungi server WhatsApp: ' . $error);
+            return response()->json(['error' => 'Gagal menghubungi server WhatsApp: ' . $error], 500);
           }
           curl_close($ch);
 
-          $response = json_decode($response, true);
+          $responseData = json_decode($response, true);
+
+          // Simpan isi $data dan respon API ke log
+          \Log::info('Data WhatsApp: ' . json_encode($data) . ' Respon WhatsApp: ' . json_encode($responseData));
+
+          // Menampilkan respon API dan menghentikan eksekusi
+          return response()->json($responseData);
         }
       } elseif ($transaksi->status_order == 'Done') {
         $transaksi->update([

@@ -12,9 +12,9 @@ use App\Models\User; // Sesuaikan dengan model pengguna
 
 class WebhookController extends Controller
 {
-    public static function text($text, $quoted = false)
+    public static function text($text)
     {
-        return json_encode(['text' => $text, 'quoted' => $quoted]);
+        return json_encode(['text' => $text, 'status' => true]);
     }
 
 
@@ -45,7 +45,7 @@ class WebhookController extends Controller
                     . "📅 *Tanggal*: " . date('d-m-Y', strtotime($transaksi->tgl_transaksi)) . " \n"
                     . "🕰️ *Jam*: " . date('H:i:s', strtotime($transaksi->tgl_transaksi)) . " \n"
                     . "🔄 *Status:* " . ($statusOrder == 'Process' ? 'Proses' : ($statusOrder == 'Done' ? 'Selesai' : $statusOrder)) . "\n\n"
-                    . ($transaksi->status_order == 'DiTerima' ? "🚚 *Tgl Diterima*: {$transaksi->tgl_ambil}\n\n" : '')
+                    . ($transaksi->status_order == 'DiTerima' ? "🚚 *Diterima Pada*: {$transaksi->tgl_ambil}\n\n" : '')
                     . "Terima kasih sudah menggunakan layanan kami!\n", true);
             } else {
                 $respon = self::text("Mohon Maaf Kak {name}, nomor Resi $nomorInvoice tidak ditemukan di sistem kami. 🙏", true);
