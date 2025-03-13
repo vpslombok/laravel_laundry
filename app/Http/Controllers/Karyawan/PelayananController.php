@@ -186,7 +186,7 @@ class PelayananController extends Controller
         // Kirim notifikasi via WhatsApp menggunakan API
         try {
           if (setNotificationWhatsappOrderSelesai(1) == 1) {
-            $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url; // URL API WhatsApp
+            $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message'; // URL API WhatsApp untuk mengirim pesan
             // $apikey = notifications_setting::where('id', 1)->first()->api_key; // Mendapatkan API Key dari basis data
 
             $data = [
@@ -347,7 +347,7 @@ class PelayananController extends Controller
 
         // Notifikasi WhatsApp
         if (setNotificationWhatsappOrderSelesai(1) == 1) {
-          $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url; // URL API WhatsApp
+          $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-media'; // URL API WhatsApp untuk mengirim media
           $fileUrl = $this->generateNotaImage($transaksi);
           // $apiKey = notifications_setting::where('id', 1)->first()->api_key; // get API Key dari database
           // Generate nota dalam bentuk gambar
