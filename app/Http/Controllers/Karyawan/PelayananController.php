@@ -15,6 +15,7 @@ use App\Jobs\DoneCustomerJob;
 use App\Jobs\OrderCustomerJob;
 use App\Notifications\{OrderMasuk, OrderSelesai};
 use GuzzleHttp\Client;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class PelayananController extends Controller
 
@@ -32,69 +33,101 @@ class PelayananController extends Controller
     return view('karyawan.transaksi.order', compact('order'));
   }
 
-  private function generateNotaImage($transaksi)
+  private function generateNotaImage($order)
   {
-    // Buat canvas gambar
-    $img = imagecreatetruecolor(400, 600);
-    $white = imagecolorallocate($img, 255, 255, 255);
-    $black = imagecolorallocate($img, 0, 0, 0);
-    $gray = imagecolorallocate($img, 200, 200, 200); // Warna untuk garis
-
-    // Isi background putih
-    imagefilledrectangle($img, 0, 0, 400, 600, $white);
-
-    // Cek apakah font ada
     $font = realpath(public_path('storage/fonts/Poppins-Italic.ttf'));
     if (!$font) {
       die("Path font tidak ditemukan!");
     }
 
-    // Tambahkan header nota
-    $judul = PageSettings::first()->judul;
-    imagettftext($img, 14, 0, 10, 30, $black, $font, "Halo kak, " . $transaksi->customers->name);
-    imagettftext($img, 12, 0, 10, 50, $black, $font, date('d/m/Y H:i', strtotime($transaksi->tgl_transaksi)));
+    $companyName = PageSettings::first()->judul;
 
-    // Tambahkan garis pemisah
-    imageline($img, 10, 60, 390, 60, $gray);
-
-    // Tambahkan teks ke gambar (data transaksi)
-    $posY = 90;
     $lineSpacing = 25;
+    $margin = 20;
+    $maxWidth = 0;
+    $posY = 50;
+    $texts = [
+      "TANGGAL   : " . date('d/m/Y H:i', strtotime($order->tgl_transaksi)),
+      "NO RESI   : " . $order->invoice,
+      "NAMA      : " . $order->customers->name,
+      "LAYANAN   : " . harga::where('id', $order->harga_id)->first()->jenis,
+      "HARGA/KG  : Rp " . number_format(harga::where('id', $order->harga_id)->first()->harga, 0, ',', '.'),
+      "BERAT     : " . $order->kg . " Kg",
+      "TOTAL     : Rp " . number_format($order->harga_akhir, 0, ',', '.'),
+      "ESTIMASI HARI : " . $order->hari . " Hari",
+    ];
 
-    imagettftext($img, 16, 0, 110, $posY, $black, $font, $judul);
-    $posY += 30;
+    if ($order->status_payment == 'Pending') {
+      $texts[] = "STATUS PEMBAYARAN : BELUM LUNAS";
+    } else if ($order->status_payment == 'Success') {
+      $texts[] = "STATUS PEMBAYARAN : LUNAS";
+    }
 
-    imagettftext($img, 12, 0, 20, $posY, $black, $font, "NO RESI   : " . $transaksi->invoice);
-    $posY += $lineSpacing;
-    imagettftext($img, 12, 0, 20, $posY, $black, $font, "NAMA      : " . $transaksi->customers->name);
-    $posY += $lineSpacing;
-    imagettftext($img, 12, 0, 20, $posY, $black, $font, "LAYANAN   : " . harga::where('id', $transaksi->harga_id)->first()->jenis);
-    $posY += $lineSpacing;
-    imagettftext($img, 12, 0, 20, $posY, $black, $font, "HARGA/KG  : Rp " . number_format(harga::where('id', $transaksi->harga_id)->first()->harga_per_kg, 0, ',', '.'));
-    $posY += $lineSpacing;
-    imagettftext($img, 12, 0, 20, $posY, $black, $font, "BERAT     : " . $transaksi->kg . " Kg");
-    $posY += $lineSpacing;
-    imagettftext($img, 12, 0, 20, $posY, $black, $font, "TOTAL     : Rp " . number_format($transaksi->harga_akhir, 0, ',', '.'));
-    $posY += $lineSpacing;
-    imagettftext($img, 12, 0, 20, $posY, $black, $font, "STATUS    : " . strtoupper($transaksi->status_payment));
+    $hari = $order->hari;
+    $created_at = $order->created_at;
+    $estimasi = $created_at->addDays($hari);
+    $texts[] = "ESTIMASI SELESAI  : " . $estimasi->format('d/m/Y') . "\n";
 
-    // Garis sebelum footer
-    imageline($img, 10, $posY + 20, 390, $posY + 20, $gray);
-    $posY += 40;
+    $footerText = "** Terima Kasih Sudah Menggunakan Layanan Kami **\n";
+    $texts[] = $footerText;
 
-    // Tambahkan footer
-    imagettftext($img, 12, 0, 40, $posY, $black, $font, "** Terima Kasih **");
-    $posY += 25;
-    imagettftext($img, 10, 0, 20, $posY, $black, $font, "Silakan ambil cucian Anda Berdasarkan Estimasi.");
-    $posY += 20;
+    foreach ($texts as $text) {
+      $bbox = imagettfbbox(12, 0, $font, $text);
+      $textWidth = $bbox[2] - $bbox[0];
+      $maxWidth = max($maxWidth, $textWidth);
+    }
 
-    // Simpan gambar ke storage Laravel
-    $fileName = 'nota_' . $transaksi->invoice . '.png';
+    // Hitung ukuran nama perusahaan agar bisa ditaruh di tengah
+    $bboxCompany = imagettfbbox(14, 0, $font, $companyName);
+    $companyWidth = $bboxCompany[2] - $bboxCompany[0];
+    $maxWidth = max($maxWidth, $companyWidth);
+
+    // Ukuran QR Code Dinamis (maksimal 150x150)
+    $qrCodeSize = min(150, $maxWidth - 40);
+
+    $imgWidth = $maxWidth + ($margin * 2);
+    $imgHeight = $posY + (count($texts) * $lineSpacing) + $qrCodeSize + 60; // Tambah ruang untuk QR Code
+
+    $img = imagecreatetruecolor($imgWidth, $imgHeight);
+    $white = imagecolorallocate($img, 255, 255, 255);
+    $black = imagecolorallocate($img, 0, 0, 0);
+    $gray = imagecolorallocate($img, 200, 200, 200);
+
+    imagefilledrectangle($img, 0, 0, $imgWidth, $imgHeight, $white);
+
+    // Tambahkan nama perusahaan di tengah atas
+    $companyX = ($imgWidth - $companyWidth) / 2;
+    imagettftext($img, 14, 0, $companyX, 30, $black, $font, $companyName);
+
+    $posY = 60; // Geser ke bawah untuk memberi ruang nama perusahaan
+    foreach ($texts as $text) {
+      imagettftext($img, 12, 0, $margin, $posY, $black, $font, $text);
+      $posY += $lineSpacing;
+    }
+
+    imageline($img, $margin, $posY, $imgWidth - $margin, $posY, $gray);
+
+    // ** Tambahkan QR Code langsung ke gambar tanpa menyimpan file **
+    $qrCode = QrCode::format('png')->size($qrCodeSize)->generate($order->invoice);
+    $qrCodeImage = imagecreatefromstring($qrCode);
+
+    if ($qrCodeImage) {
+      $qrCodeWidth = imagesx($qrCodeImage);
+      $qrCodeHeight = imagesy($qrCodeImage);
+
+      // Tempatkan QR code di bagian bawah tengah
+      $qrCodeX = ($imgWidth - $qrCodeWidth) / 2;
+      $qrCodeY = $posY + 20;
+
+      imagecopy($img, $qrCodeImage, $qrCodeX, $qrCodeY, 0, 0, $qrCodeWidth, $qrCodeHeight);
+      imagedestroy($qrCodeImage);
+    }
+
+    $fileName = 'nota_' . $order->invoice . '.png';
     $filePath = storage_path('app/public/' . $fileName);
     imagepng($img, $filePath);
     imagedestroy($img);
 
-    // Return URL gambar yang bisa diakses
     return asset('storage/' . $fileName);
   }
 
@@ -191,12 +224,13 @@ class PelayananController extends Controller
         // Kirim notifikasi via WhatsApp menggunakan API
         try {
           if (setNotificationWhatsappOrderSelesai(1) == 1) {
-            $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message'; // URL API WhatsApp untuk mengirim pesan
-            // $apikey = notifications_setting::where('id', 1)->first()->api_key; // Mendapatkan API Key dari basis data
+            $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-media'; // URL API WhatsApp untuk mengirim media
+            $fileUrl = $this->generateNotaImage($order);
 
             $data = [
-              'number' => $order->customers->no_telp, // Nomor penerima
-              'message' => "Terima kasih, " . $order->customer . ". Laundryan Anda sudah kami terima dengan nomor invoice " . $order->invoice . ". Kami akan segera memproses laundryan Anda. Silakan tunggu informasi lebih lanjut. Anda dapat memantau status laundryan Anda melalui website kami di " . url('/')
+              'number' =>  $order->customers->no_telp,
+              'message' => "Halo Kak *{$order->customers->name}*, berikut nota transaksi laundry Anda dengan No Resi *{$order->invoice}*. Anda dapat cek status laundry Anda dari website kami di " . url('/') . " maupun WhatsApp Bot kami.",
+              'file_url' => $fileUrl // URL gambar nota
             ];
 
             $ch = curl_init($waApiUrl);
@@ -352,15 +386,23 @@ class PelayananController extends Controller
 
         // Notifikasi WhatsApp
         if (setNotificationWhatsappOrderSelesai(1) == 1) {
-          $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-media'; // URL API WhatsApp untuk mengirim media
-          $fileUrl = $this->generateNotaImage($transaksi);
-          // $apiKey = notifications_setting::where('id', 1)->first()->api_key; // get API Key dari database
-          // Generate nota dalam bentuk gambar
+          $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message';
+          $createdAt = \Carbon\Carbon::parse($transaksi->created_at);
+          $updatedAt = \Carbon\Carbon::parse($transaksi->updated_at);
+          $lamaPengerjaan = $createdAt->diffInDays($updatedAt); // Hitung selisih hari
+          $jenisLayanan = harga::where('id', $transaksi->harga_id)->first()->jenis;
 
           $data = [
             'number' =>  $transaksi->customers->no_telp,
-            'message' => "Halo Kak *{$transaksi->customers->name}*, berikut nota transaksi laundry Anda dengan Invoice *{$transaksi->invoice}*",
-            'file_url' => $fileUrl // URL gambar nota
+            'message' => "🌟 Halo Kak *{$transaksi->customers->name}* 🌟\n\n" .
+              "Kami punya kabar baik nih! 🎉 Laundry Kakak dengan No Resi *{$transaksi->invoice}* sudah selesai dan siap untuk diambil. 🧺✨\n\n" .
+              "📅 *Detail Transaksi:*\n" .
+              "• 🏷️ *Layanan:* {$jenisLayanan}\n" .
+              "• ⚖️ *Berat:* {$transaksi->kg} Kg\n" .
+              "• ⏳ *Lama Pengerjaan:* {$lamaPengerjaan} Hari\n" .
+              "• 💰 *Total Biaya:* Rp " . number_format($transaksi->harga_akhir, 0, ',', '.') . "\n\n" .
+              "Silakan datang ke outlet kami untuk mengambilnya. Jangan lupa, pakaian bersih dan wangi sudah menanti! 😍\n\n" .
+              "Terima kasih telah menggunakan layanan kami. Semoga hari Kakak menyenangkan! 😊🙏"
           ];
 
           // Kirim data menggunakan cURL dengan melewati pemeriksaan SSL

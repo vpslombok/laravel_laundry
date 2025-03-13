@@ -49,7 +49,8 @@ class TransaksiController extends Controller
           <input type='hidden' value='".$item->kg * $item->harga."'>
           <td>".Rupiah::getRupiah($item->kg * $item->harga)."</td>";
           $return .="<td><a href='invoice-customer/$item->invoice' class='btn btn-sm btn-success style='color:white'>Invoice</a></td>";
-        $return .= "</td>
+          $return .="<td><a href='hapus-transaksi/$item->id' class='btn btn-sm btn-danger style='color:white'>Hapus</a></td>";
+          $return .= "</td>
         </tr>";
         $no++;
       }
@@ -68,5 +69,14 @@ class TransaksiController extends Controller
       ->first();
 
       return view('modul_admin.transaksi.invoice', compact('invoice','dataInvoice'));
+    }
+
+    // Hapus Transaksi
+    public function hapusTransaksi($id)
+    {
+      $transaksi = transaksi::find($id);
+      $transaksi->delete();
+
+      return redirect()->back()->with('success', 'Transaksi berhasil dihapus');
     }
 }
