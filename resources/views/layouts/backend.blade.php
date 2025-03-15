@@ -9,6 +9,7 @@
   <meta name="description" content="E-Laundy aplikasi laundry berbasis website">
   <meta name="keywords" content="E-Laundry,Laundry">
   <meta name="author" content="Bayu">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>@yield('title')</title>
   <link rel="apple-touch-icon" href="{{secure_asset('backend/images/ico/apple-icon-120.png')}}">
   <link rel="shortcut icon" type="image/x-icon" href="{{secure_asset('backend/images/ico/favicon.ico')}}">

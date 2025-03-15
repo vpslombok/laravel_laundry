@@ -25,7 +25,7 @@
                     <table id="myTable" class="table display table-bordered table-striped">
                         <thead>
                             <tr>
-                                <th><input type="checkbox" id="selectAll" name="selectAll" onclick="toggleSelectAll()"></th>
+                                <th class="no-sort"><input type="checkbox" id="selectAll"></th>
                                 <th>#</th>
                                 <th>No Resi</th>
                                 <th>TGL Transaksi</th>
@@ -64,13 +64,21 @@
                                     <p>{{Rupiah::getRupiah($item->harga_akhir)}}</p>
                                 </td>
                                 <td align="center">
-                                    <a href="{{url('invoice-customer', $item->invoice)}}" class="btn btn-sm btn-success" style="color:white">Invoice</a>
-                                    <a href="{{url('hapus-transaksi', $item->id)}}" class="btn btn-sm btn-danger" style="color:white">Hapus</a>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-warning dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            Aksi
+                                        </button>
+                                        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                            <a class="dropdown-item" href="{{url('invoice-customer', $item->invoice)}}">Cetak</a>
+                                            <a class="dropdown-item" href="{{url('hapus-transaksi', $item->id)}}">Hapus</a>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                             @endforeach
                         </tbody>
                     </table>
+
                 </div>
             </div>
         </div>
@@ -80,74 +88,84 @@
 @section('scripts')
 <script type="text/javascript">
     $(document).ready(function() {
-        console.log("✅ Script berjalan!");
-
-        // Cek apakah DataTable sudah terbaca
-        if ($.fn.DataTable) {
-            console.log("✅ DataTable ditemukan!");
-            $('#myTable').DataTable();
-        } else {
-            console.log("❌ DataTable TIDAK ditemukan!");
-        }
-
-        $("#selectAll").on("click", function() {
-            let checkedStatus = this.checked; // Ambil status checkbox utama
-            console.log("🔄 Checkbox SelectAll diubah: ", checkedStatus);
-
-            $(".checkbox").each(function() {
-                $(this).prop("checked", checkedStatus);
-            });
-
-            console.log("📌 Total Checkbox Dipilih: ", $(".checkbox:checked").length);
+        // Inisialisasi DataTable dengan sorting default di kolom kedua (bukan kolom checkbox)
+        var table = $('#myTable').DataTable({
+            "order": [
+                [1, 'asc']
+            ], // Sorting default di kolom kedua (bukan checkbox)
+            "columnDefs": [{
+                    "orderable": false,
+                    "targets": 0
+                } // Nonaktifkan sorting untuk kolom pertama (checkbox)
+            ]
         });
 
-        // Debug Checkbox Individual
-        $(".checkbox").on("change", function() {
-            console.log("🔍 Checkbox diubah! ID: ", $(this).val());
+        // Reset checkbox setelah tabel di-refresh
+        table.on('draw.dt', function() {
+            $("#selectAll").prop("checked", false);
+        });
 
-            // Cek apakah semua checkbox sudah dicentang
+        // Event handler untuk Select All
+        $(document).on("change", "#selectAll", function() {
+            let checkedStatus = this.checked;
+            $(".checkbox").prop("checked", checkedStatus);
+        });
+
+        // Event handler untuk checkbox individu
+        $(document).on("change", ".checkbox", function() {
             if ($(".checkbox:checked").length === $(".checkbox").length) {
                 $("#selectAll").prop("checked", true);
             } else {
                 $("#selectAll").prop("checked", false);
             }
-            console.log("📌 Total Checkbox Dipilih: ", $(".checkbox:checked").length);
         });
 
-        // Debug tombol hapus
+        // Tombol hapus terpilih
         $("#hapus-terpilih").click(function() {
             var selected = [];
             $(".checkbox:checked").each(function() {
                 selected.push($(this).val());
             });
 
-            console.log("🗑️ Checkbox yang akan dihapus: ", selected);
-
             if (selected.length > 0) {
-                if (confirm("Apakah Anda yakin ingin menghapus data terpilih?")) {
-                    $.ajax({
-                        type: "POST",
-                        url: "/hapus-transaksi-terpilih",
-                        data: {
-                            ids: selected,
-                            "_token": $('meta[name=csrf-token]').attr("content")
-                        },
-                        success: function(response) {
-                            console.log("✅ Sukses menghapus!", response);
-                            location.reload();
-                        },
-                        error: function(xhr) {
-                            console.error("❌ Gagal menghapus!", xhr.responseText);
-                        }
-                    });
-                }
+                Swal.fire({
+                    title: 'Apakah Anda yakin?',
+                    text: "Ingin menghapus data terpilih?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, hapus!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajaxSetup({
+                            headers: {
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            }
+                        });
+                        $.ajax({
+                            type: "POST",
+                            url: "/hapus-transaksi-terpilih",
+                            data: {
+                                ids: selected
+                            },
+                            success: function(response) {
+                                location.reload();
+                            },
+                            error: function(xhr) {
+                                console.error(xhr.responseText);
+                            }
+                        });
+                    }
+                });
             } else {
-                alert("Tidak ada data yang dipilih.");
+                Swal.fire(
+                    'Tidak ada data yang dipilih.',
+                    '',
+                    'warning'
+                );
             }
         });
-
-        // Cek apakah checkbox ada di halaman
-        console.log("📌 Total Checkbox ditemukan: ", $(".checkbox").length);
     });
 </script>
 @endsection

@@ -32,7 +32,9 @@ Route::middleware('auth')->group(function () {
     Route::get('filter-transaksi','Admin\TransaksiController@filtertransaksi'); // filter data transaksi by karyawan
     Route::get('invoice-customer/{invoice}','Admin\TransaksiController@invoice'); // lihat invoice
     Route::get('hapus-transaksi/{id}','Admin\TransaksiController@hapusTransaksi');
+    Route::post('hapus-transaksi-terpilih','Admin\TransaksiController@hapusTransaksiTerpilih');
 
+    // admin akses
     Route::get('data-harga','Admin\FinanceController@dataharga');
     Route::post('harga-store','Admin\FinanceController@hargastore');
     Route::get('edit-harga','Admin\FinanceController@hargaedit');
