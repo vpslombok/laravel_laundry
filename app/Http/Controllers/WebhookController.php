@@ -56,12 +56,12 @@ class WebhookController extends Controller
             $user = User::where('no_telp', $from)->first();
 
             if (!$user) {
-                $respon = self::text("⚠️ *Nomor telepon tidak ditemukan!* ⚠️\nNomor *{$from}* tidak ada dalam data kami.", true);
+                $respon = self::text("⚠️ *Mohon Maaf * ⚠️\nNomor *{$from}* Belum Terdaftar di sistem Kami...", true);
             } else {
                 $listLaundry = Transaksi::where('customer_id', $user->id)->where('status_order', '!=', 'DiTerima')->get();
 
                 if ($listLaundry->isEmpty()) {
-                    $respon = self::text("*Saat ini, tidak ada laundry yang sedang diproses atas nama* *{$user->name}*.", true);
+                    $respon = self::text("*Mohon maaf, untuk saat ini tidak ada laundryan yang sedang kami diproses dengan atas nama* *{$user->name}*.", true);
                 } else {
                     // Awal teks
                     $pesan = "*Daftar List Laundry Anda*\n";
