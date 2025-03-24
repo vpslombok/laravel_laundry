@@ -26,11 +26,11 @@
                       </li>
 
                       <li>
-                        <a href="">Join Laundry</a>
+                        <a href="">Laundry Online</a>
                       </li>
 
                       <li>
-                        <a href="">Investasi</a>
+                        <a href="">Transaksi Online</a>
                       </li>
                     </ul>
                 </div>

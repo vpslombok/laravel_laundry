@@ -32,6 +32,7 @@
                                 <th>Customer</th>
                                 <th>Status Order</th>
                                 <th>Status Pembayaran</th>
+                                <th>Total Kg</th>
                                 <th>Jenis Laundri</th>
                                 <th>Total</th>
                                 <th>Action</th>
@@ -47,9 +48,11 @@
                                 <td>{{$item->customer}}</td>
                                 <td>
                                     @if ($item->status_order == 'Done')
-                                    <span class="label label-success">Selesai</span>
-                                    @elseif($item->status_order == 'DiTerima')
-                                    <span class="label label-info">Sudah Diambil</span>
+                                    <span class="badge badge-success">Selesai</span>
+                                    @elseif($item->status_order == 'DiTerima') 
+                                    <span class="badge badge-info">Sudah Diambil</span>
+                                    @elseif($item->status_order == 'Process')
+                                    <span class="badge badge-warning">Sedang Diproses</span>
                                     @endif
                                 </td>
                                 <td>
@@ -59,6 +62,7 @@
                                     <span class="label label-info">Belum Dibayar</span>
                                     @endif
                                 </td>
+                                <td>{{$item->kg}}</td>
                                 <td>{{$item->price->jenis}}</td>
                                 <td>
                                     <p>{{Rupiah::getRupiah($item->harga_akhir)}}</p>

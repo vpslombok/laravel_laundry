@@ -1,5 +1,5 @@
 @extends('layouts.backend')
-@section('title','Tambah Data Order')
+@section('title','Form Transaksi Order Masuk')
 @section('content')
 @if (@$cek_harga->user_id == !null || @$cek_harga->user_id == Auth::user()->id)
 
@@ -12,7 +12,7 @@
 
 <div class="card card-outline-info">
   <div class="card-header">
-    <h4 class="card-title">Form Tambah Data Order
+    <h4 class="card-title">Form Transaksi Order Masuk
       <a href="{{url('customers-create')}}" class="btn btn-danger">+ Customer Baru</a>
     </h4>
   </div>
@@ -58,11 +58,34 @@
               @enderror
             </div>
           </div>
-          <div class="col-md-3">
+
+          <div class="col-md-2">
             <div class="form-group has-success">
-              <label class="control-label">Berat Pakaian</label>
-              <input type="number" class="form-control form-control-danger @error('kg') is-invalid @enderror" value=" {{old('kg')}} " name="kg" placeholder="Berat Pakaian" autocomplete="off" min="1">
-              @error('kg')
+              <label class="control-label">Disc</label>
+              <input type="number" id="disc" name="disc" placeholder="Tulis Disc"
+                class="form-control @error('disc') is-invalid @enderror"
+                value="0" min="0" max="100" step="0.1" autocomplete="off">
+              @error('disc')
+              <span class="invalid-feedback text-danger" role="alert">
+                <strong>{{ $message }}</strong>
+              </span>
+              @enderror
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+
+          <div class="col-md-3">
+            <div class="orm-group has-success">
+              <label class="control-label">Pilih Layanan</label>
+              <select id="id" name="harga_id" class="form-control select2 @error('harga_id') is-invalid @enderror">
+                <option value="">-- Jenis Layanan --</option>
+                @foreach($jenisPakaian as $jenis)
+                <option value="{{$jenis->id}}" {{old('harga_id') == $jenis->id ? 'selected' : '' }}>{{$jenis->jenis}}</option>
+                @endforeach
+              </select>
+              @error('harga_id')
               <span class="invalid-feedback text-danger" role="alert">
                 <strong>{{ $message }}</strong>
               </span>
@@ -72,17 +95,38 @@
 
           <div class="col-md-3">
             <div class="form-group has-success">
-              <label class="control-label">Status Pembayaran</label>
-              <select class="form-control custom-select @error('status_payment') is-invalid @enderror" name="status_payment">
-                <option value="">-- Pilih Status Payment --</option>
-                <option value="Pending" {{old('status_payment') == 'Pending' ? 'selected' : ''}}>Belum Dibayar</option>
-                <option value="Success" {{old('status_payment') == 'Success' ? 'selected' : ''}}>Sudah Dibayar</option>
-              </select>
-              @error('status_payment')
+              <label class="control-label">Berat Pakaian</label>
+              <input type="number" id="kg" class="form-control form-control-danger @error('kg') is-invalid @enderror"
+                value="{{old('kg')}}" name="kg" placeholder="input disini"
+                autocomplete="off" min="1" step="0.1">
+              @error('kg')
               <span class="invalid-feedback text-danger" role="alert">
                 <strong>{{ $message }}</strong>
               </span>
               @enderror
+            </div>
+          </div>
+          <!-- Lama Hari -->
+          <div class="col-md-1">
+            <div class="form-group has-success">
+              <label class="control-label">Hari</label>
+              <input id="select-hari" class="form-control" name="hari" value="" readonly>
+            </div>
+          </div>
+
+          <!-- Harga per Kg -->
+          <div class="col-md-2">
+            <div class="form-group has-success">
+              <label class="control-label">Harga</label>
+              <input id="select-harga" class="form-control" name="harga" value="" readonly>
+            </div>
+          </div>
+
+          <!-- Total Harga -->
+          <div class="col-md-2">
+            <div class="form-group has-success">
+              <label class="control-label">Total Harga</label>
+              <input id="select-total" class="form-control" name="total-harga" value="" readonly>
             </div>
           </div>
         </div>
@@ -104,34 +148,15 @@
               @enderror
             </div>
           </div>
-
           <div class="col-md-3">
-            <div class="orm-group has-success">
-              <label class="control-label">Pilih Layanan</label>
-              <select id="id" name="harga_id" class="form-control select2 @error('harga_id') is-invalid @enderror">
-                <option value="">-- Jenis Layanan --</option>
-                @foreach($jenisPakaian as $jenis)
-                <option value="{{$jenis->id}}" {{old('harga_id') == $jenis->id ? 'selected' : '' }}>{{$jenis->jenis}}</option>
-                @endforeach
-              </select>
-              @error('harga_id')
-              <span class="invalid-feedback text-danger" role="alert">
-                <strong>{{ $message }}</strong>
-              </span>
-              @enderror
-            </div>
-          </div>
-          <div class="col-md-2">
-            <span id="select-hari"></span>
-          </div>
-          <div class="col-md-2">
-            <span id="select-harga"></span>
-          </div>
-          <div class="col-md-2">
             <div class="form-group has-success">
-              <label class="control-label">Disc</label>
-              <input type="number" name="disc" placeholder="Tulis Disc" class="form-control @error('disc') is-invalid @enderror" value="0">
-              @error('disc')
+              <label class="control-label">Status Pembayaran</label>
+              <select class="form-control custom-select @error('status_payment') is-invalid @enderror" name="status_payment">
+                <option value="">-- Pilih Status Payment --</option>
+                <option value="Pending" {{old('status_payment') == 'Pending' ? 'selected' : ''}}>Belum Dibayar</option>
+                <option value="Success" {{old('status_payment') == 'Success' ? 'selected' : ''}}>Sudah Dibayar</option>
+              </select>
+              @error('status_payment')
               <span class="invalid-feedback text-danger" role="alert">
                 <strong>{{ $message }}</strong>
               </span>
@@ -169,43 +194,69 @@
 @endsection
 @section('scripts')
 <script type="text/javascript">
-  // Filter Harga
   $(document).ready(function() {
-    var id = $("#id").val();
-    $.get('{{ Url("listhari") }}', {
-      '_token': $('meta[name=csrf-token]').attr('content'),
-      id: id
-    }, function(resp) {
-      $("#select-hari").html(resp);
-      $.get('{{ Url("listharga") }}', {
-        '_token': $('meta[name=csrf-token]').attr('content'),
-        id: id
-      }, function(resp) {
-        $("#select-harga").html(resp);
+    updateData(); // Panggil saat halaman pertama kali dimuat
+
+    // Gunakan event yang lebih spesifik
+    $("#id, #kg, #disc").on("change input", function() {
+      // Tambahkan debounce untuk menghindari terlalu banyak request
+      clearTimeout(window.updateDataTimeout);
+      window.updateDataTimeout = setTimeout(updateData, 300);
+    });
+  });
+
+  // Fungsi untuk memperbarui data harga, lama hari, dan total harga
+  async function updateData() {
+    let id = $("#id").val();
+    let kg = parseFloat($("#kg").val()) || 1; // Default minimal 1 kg
+    let disc = parseFloat($("#disc").val()) || 0; // Default diskon 0%
+
+    console.log("Updating data with:", {
+      id,
+      kg,
+      disc
+    }); // Debugging
+
+    if (!id) {
+      console.log("ID tidak dipilih");
+      return; // Jika id tidak dipilih, hentikan fungsi
+    }
+
+    try {
+      // Gunakan Promise.all untuk menjalankan request paralel
+      let [hariResponse, hargaResponse] = await Promise.all([
+        $.get("{{ url('listhari') }}", {
+          id: id
+        }),
+        $.get("{{ url('listharga') }}", {
+          id: id
+        })
+      ]);
+
+      // Update nilai hari dan harga
+      if (hariResponse.hari !== undefined) {
+        $("#select-hari").val(hariResponse.hari);
+      }
+      if (hargaResponse.harga !== undefined) {
+        $("#select-harga").val(hargaResponse.harga);
+      }
+
+      // Hitung total harga setelah mendapatkan harga
+      let totalResponse = await $.get("{{ url('total-harga') }}", {
+        id: id,
+        kg: kg,
+        disc: disc
       });
-    });
-  });
 
-  $(document).on('change', '#id', function(e) {
-    var id = $(this).val();
-    $.get('{{ Url("listhari") }}', {
-      '_token': $('meta[name=csrf-token]').attr('content'),
-      id: id
-    }, function(resp) {
-      $("#select-hari").html(resp);
-    });
-  });
+      if (totalResponse.total_harga !== undefined) {
+        $("#select-total").val(totalResponse.total_harga);
+      }
 
-  $(document).on('change', '#id', function(e) {
-    var id = $(this).val();
-    $.get('{{ Url("listharga") }}', {
-      '_token': $('meta[name=csrf-token]').attr('content'),
-      id: id
-    }, function(resp) {
-      $("#select-harga").html(resp);
-    });
-  });
-
+    } catch (error) {
+      console.error("Error:", error.responseText || error);
+    }
+  }
+  // Fungsi untuk memeriksa panjang nomor telepon
   function showCustomerName(no_telp) {
     if (no_telp.length < 12) {
       return;

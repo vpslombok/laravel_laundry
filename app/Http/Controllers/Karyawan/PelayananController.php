@@ -283,47 +283,67 @@ class PelayananController extends Controller
     return view('karyawan.transaksi.addorder', compact('customer', 'newID', 'cek_harga', 'cek_customer', 'jenisPakaian'));
   }
 
-  // Filter List Harga
   public function listharga(Request $request)
   {
-    $list_harga = harga::select('id', 'harga')
-      ->where('user_id', Auth::user()->id)
+    $list_harga = Harga::select('id', 'harga') // Gunakan "Harga" dengan huruf besar jika ini model
+      ->where('user_id', Auth::id())
       ->where('id', $request->id)
-      ->get();
-    $select = '';
-    $select .= '
-                    <div class="form-group has-success">
-                    <label for="id" class="control-label">Harga</label>
-                    <input id="harga" class="form-control" name="harga" value="';
-    foreach ($list_harga as $studi) {
-      $select .= 'Rp. ' . number_format($studi->harga, 0, ",", ".");
+      ->first(); // Menggunakan first() karena ID unik
+
+    if (!$list_harga) {
+      return response()->json(['error' => 'Harga tidak ditemukan'], 404);
     }
-    $select .= '" readonly>
-                    </div>
-                    </div>';
-    return $select;
+
+    return response()->json([
+      'harga' => 'Rp. ' . number_format($list_harga->harga, 0, ",", ".")
+    ]);
   }
+
+  public function totalHarga(Request $request)
+  {
+
+    $harga = Harga::select('id', 'harga') // Benar
+    ->where('user_id', Auth::id())
+    ->where('id', $request->id)
+    ->first();
+
+
+    // Cek apakah harga ditemukan
+    if (!$harga) {
+      return response()->json(['error' => 'Harga tidak ditemukan'], 404);
+    }
+
+    // Perhitungan harga
+    $kg = $request->kg ?? 1;
+    $disc = $request->disc ?? 0;
+    $hitung = $kg * $harga->harga;
+    $diskon = ($disc > 0) ? ($hitung * $disc / 100) : 0;
+    $total = $hitung - $diskon;
+
+    return response()->json([
+      'total_harga' => 'Rp. ' . number_format($total, 0, ",", ".")
+    ]);
+  }
+
+
 
   // Filter List Jumlah Hari
   public function listhari(Request $request)
   {
     $list_jenis = harga::select('id', 'hari')
-      ->where('user_id', Auth::user()->id)
+      ->where('user_id', Auth::id())
       ->where('id', $request->id)
-      ->get();
-    $select = '';
-    $select .= '
-                    <div class="form-group has-success">
-                    <label for="id" class="control-label">Hari</label>
-                    <input id="hari" class="form-control" name="hari" value="';
-    foreach ($list_jenis as $hari) {
-      $select .= $hari->hari;
+      ->first(); // Menggunakan first() karena ID unik
+
+    if (!$list_jenis) {
+      return response()->json(['error' => 'Data tidak ditemukan'], 404);
     }
-    $select .= '" readonly>
-                    </div>
-                    </div>';
-    return $select;
+
+    return response()->json([
+      'hari' => $list_jenis->hari
+    ]);
   }
+
 
   // customer name
   public function getCustomerName(Request $request)
