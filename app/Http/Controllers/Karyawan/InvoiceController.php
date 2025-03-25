@@ -30,7 +30,6 @@ class InvoiceController extends Controller
 
   public function cetakinvoice(Request $request)
   {
-    // Get transaction data with relationships
     $invoice = Transaksi::with('price')
       ->where('user_id', Auth::id())
       ->where('id', $request->id)
@@ -46,22 +45,26 @@ class InvoiceController extends Controller
 
     // Generate QR Code
     $qrCode = base64_encode(QrCode::format('png')
-      ->size(150) // Smaller size for thermal printer
-      ->errorCorrection('H') // High error correction
+      ->size(120) // Reduced size for single page
+      ->errorCorrection('H')
       ->generate($data->invoice));
 
+    // Calculate dynamic height based on content
+    $itemCount = count($invoice);
+    $baseHeight = 400; // Base height for minimal content
+    $dynamicHeight = $baseHeight + ($itemCount * 15); // Add 15pt per item
+
     // Generate PDF
-    $pdf = PDF::loadView('karyawan.laporan.cetak', [
-      'invoice' => $invoice,
-      'data' => $data,
-      'bank' => $bank,
-      'nama_laundry' => $nama_laundry,
-      'qrCode' => $qrCode
-    ])->setPaper([0, 0, 226.77, 700], 'portrait') // 80mm width (226.77 points)
-      ->setOption('margin-top', 5)
-      ->setOption('margin-bottom', 5)
-      ->setOption('margin-left', 5)
-      ->setOption('margin-right', 5);
+    $pdf = PDF::loadView('karyawan.laporan.cetak', compact('invoice', 'data', 'bank', 'nama_laundry', 'qrCode'))
+      ->setPaper([0, 0, 226.77, $dynamicHeight], 'portrait') // Dynamic height
+      ->setOptions([
+        'margin-top' => 2,
+        'margin-bottom' => 2,
+        'margin-left' => 2,
+        'margin-right' => 2,
+        'isHtml5ParserEnabled' => true,
+        'isRemoteEnabled' => true
+      ]);
 
     return $pdf->stream('invoice-' . $data->invoice . '.pdf');
   }

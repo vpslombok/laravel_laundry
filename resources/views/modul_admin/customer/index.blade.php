@@ -18,33 +18,85 @@
                                 <th>Nama</th>
                                 <th>Alamat</th>
                                 <th>No Telpon</th>
-                                <th>Kelamin</th>
+                                <th>Email</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php $no=1; ?>
+                            <?php $no = 1; ?>
                             @foreach ($customer as $item)
                             <tr>
                                 <td>{{$no}}</td>
                                 <td>{{$item->name}}</td>
                                 <td>{{$item->alamat}}</td>
                                 <td>{{$item->no_telp}}</td>
+                                <td>{{$item->email}}</td>
                                 <td>
-                                    @if ($item->kelamin == 'L')
-                                        <span class="label label-success">Laki-laki</span>
-                                    @else
-                                        <span class="label label-info">Perempuan</span>
-                                    @endif
-                                </td>
-                                <td>
-                                  <a href="{{route('customer.show', $item->id)}}" class="btn btn-info btn-sm">Info</a>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            Aksi
+                                        </button>
+                                        <div class="dropdown-menu">
+                                            <a class="dropdown-item" href="{{route('customer.show', $item->id)}}">
+                                                <i class="fas fa-info-circle mr-2"></i> Info
+                                            </a>
+                                            <a class="dropdown-item edit-btn" href="#"
+                                                data-id="{{$item->id}}"
+                                                data-name="{{$item->name}}"
+                                                data-alamat="{{$item->alamat}}"
+                                                data-no_telp="{{$item->no_telp}}"
+                                                data-email="{{$item->email}}"
+                                                data-toggle="modal"
+                                                data-target="#editCustomerModal">
+                                                <i class="fas fa-edit mr-2"></i> Edit
+                                            </a>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                             <?php $no++; ?>
                             @endforeach
                         </tbody>
                     </table>
+                    <!-- Modal Edit -->
+                    <div class="modal fade" id="editCustomerModal" tabindex="-1" role="dialog" aria-labelledby="editCustomerModalLabel" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="editCustomerModalLabel">Edit Data Customer</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <form id="editCustomerForm" method="POST">
+                                    @csrf
+                                    @method('PUT')
+                                    <div class="modal-body">
+                                        <div class="form-group">
+                                            <label for="name">Nama Customer</label>
+                                            <input type="text" class="form-control" id="name" name="name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="alamat">Alamat</label>
+                                            <textarea class="form-control" id="alamat" name="alamat" rows="3" required></textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="no_telp">No. Telepon</label>
+                                            <input type="text" class="form-control" id="no_telp" name="no_telp" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="email">Email</label>
+                                            <input type="email" class="form-control" id="email" name="email" required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                                        <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -98,6 +150,50 @@
         buttons: [
             'copy', 'csv', 'excel', 'pdf', 'print'
         ]
+    });
+</script>
+<script>
+    $(document).ready(function() {
+        // Handle click on edit button
+        $('.edit-btn').click(function() {
+            var id = $(this).data('id');
+            var name = $(this).data('name');
+            var alamat = $(this).data('alamat');
+            var no_telp = $(this).data('no_telp');
+            var email = $(this).data('email');
+
+
+
+            // Set form action URL
+            $('#editCustomerForm').attr('action', '/customer/' + id);
+
+            // Populate form fields
+            $('#name').val(name);
+            $('#alamat').val(alamat);
+            $('#no_telp').val(no_telp);
+            $('#email').val(email);
+        });
+
+        // Handle form submission
+        $('#editCustomerForm').submit(function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var url = form.attr('action');
+
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: form.serialize(),
+                success: function(response) {
+                    $('#editCustomerModal').modal('hide');
+                    // Refresh page or update table row
+                    location.reload();
+                },
+                error: function(xhr) {
+                    alert('Terjadi kesalahan. Silakan coba lagi.');
+                }
+            });
+        });
     });
 </script>
 @endsection

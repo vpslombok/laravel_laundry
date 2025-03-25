@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice Laundry</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&display=swap" rel="stylesheet">
     <style>
         @page {
             size: 80mm 297mm;
-            /* Lebar 80mm (thermal) dan tinggi roll paper */
             margin: 0;
             padding: 0;
         }
@@ -32,9 +32,12 @@
         }
 
         .title {
-            font-weight: bold;
-            font-size: 14px;
+            font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+            font-weight: bolder;
+            font-size: 20px;
             margin-bottom: 3px;
+            letter-spacing: 0.5px;
+            /* Memberi kesan lebih tebal */
         }
 
         .subtitle {
@@ -98,9 +101,9 @@
         }
 
         .qr-code {
-            width: 35mm;
+            width: 25mm;
             /* Optimal size for thermal printers */
-            height: 35mm;
+            height: 25mm;
             margin: 0 auto;
             display: block;
         }
@@ -125,7 +128,6 @@
 
     <div class="header">
         <div class="title">{{$nama_laundry}}</div>
-        <div class="subtitle">No Resi #{{$data->invoice}}</div>
         <div>{{\Carbon\Carbon::parse($data->tgl_transaksi)->format('d/m/Y H:i')}}</div>
     </div>
 
@@ -203,7 +205,7 @@
     <div class="qr-container">
         @if(isset($qrCode))
         <img class="qr-code" src="data:image/png;base64,{{ $qrCode }}" alt="QR Code Invoice">
-        <div class="qr-text">SCAN</div>
+        <div class="subtitle">No Resi #{{$data->invoice}}</div>
         @else
         <div class="barcode">*{{$data->invoice}}*</div>
         <div class="qr-text">{{$data->invoice}}</div>
@@ -213,8 +215,57 @@
     <!-- Footer -->
     <div class="footer">
         Terima kasih telah menggunakan layanan kami<br>
-        {{$nama_laundry}}
     </div>
 </body>
 
 </html>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Hitung tinggi dokumen dalam piksel
+        let body = document.body;
+        let html = document.documentElement;
+        let height = Math.max(
+            body.scrollHeight,
+            body.offsetHeight,
+            html.clientHeight,
+            html.scrollHeight,
+            html.offsetHeight
+        );
+
+        // Konversi ke milimeter (1px ≈ 0.264583mm)
+        let heightInMM = height * 0.264583;
+
+        // Ambil tinggi kertas A4 standar (297mm) dan hitung jumlah halaman
+        const a4HeightMM = 297; // Tinggi A4 dalam mm
+        const pageCount = Math.ceil(heightInMM / a4HeightMM);
+
+        // Simpan informasi halaman ke cookie (expire 1 menit)
+        let expires = new Date();
+        expires.setTime(expires.getTime() + 60 * 1000);
+        document.cookie = `totalPages=${pageCount}; expires=${expires.toUTCString()}; path=/`;
+
+        console.log(`Dokumen membutuhkan ${pageCount} halaman A4`);
+    });
+</script>
+
+<style>
+    @media print {
+
+        /* Reset margin untuk penggunaan kertas maksimal */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        /* Tambahkan page break jika konten melebihi 1 halaman */
+        .content {
+            page-break-after: always;
+        }
+
+        /* Pastikan body tidak memiliki padding saat cetak */
+        body {
+            padding: 0;
+            margin: 0;
+        }
+    }
+</style>
