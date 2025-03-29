@@ -21,8 +21,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('admin', 'Admin\AdminController');
 
     // Pengguna/karyawan
-    Route::resource('karyawan', 'Admin\KaryawanController');
-    Route::get('update-satatus-karyawan', 'Admin\KaryawanController@updateKaryawan');
+    Route::resource('karyawan', 'Admin\KaryawanController')->except(['show']);
+    Route::get('update-status-karyawan', 'Admin\KaryawanController@updateKaryawan')->name('karyawan.update-status');
+    Route::put('update-karyawan/{id}', 'Admin\KaryawanController@update')->name('karyawan.update-data');
 
     // Customer
     Route::resource('customer', 'Admin\CustomerController');

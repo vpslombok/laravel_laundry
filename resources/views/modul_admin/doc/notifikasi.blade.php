@@ -25,9 +25,9 @@
 
                     <h5>WhatsApp Notifikasi</h5>
                     Pada WhatsApp Notifikasi ini ada beberapa yang harus terpenuhi agar Notifikasi bisa berjalan. Berbeda dengan Telegram Notifikasi, WhatsApp notifikasi akan mengirimkan pemberitahuan secara real time/langsung kepada customer. Untuk hal ini, pemberitahuan yang dikirimkan hanya ketika Laundry sudah selesai atau pada page <b>Data Transaksi > Order Masuk</b> kalian meng-klik button selesai yang hanya bisa dilakukan jika kalian Login sebagai Karyawan. <br>
-                    Pada kasus ini saya menggunakan API dari <a href="">KirimWA.id</a>, ini adalah sebuah layanan unofficial WhatsApp API Gateway. <br><br>
+                    Pada kasus ini saya menggunakan API dari <a href="">Lombok Server</a>, ini adalah sebuah layanan unofficial WhatsApp API Gateway. <br><br>
                     <ol>
-                      <li>Pastikan kalian sudah mendaftar terlebih dahulu untuk mendapatkan TOKEN nya, <a href="">daftar disini.</a></li>
+                      <li>Pastikan kalian sudah mendaftar terlebih dahulu untuk mendapatkan TOKEN nya, <a href="https://api.sasak.xyz/login.php">daftar disini.</a></li>
                       <li><b>Copy</b> dan <b>Paste</b> TOKEN yang sudah di dapat pada halaman <b>Other > Setting > Notifications</b> </li>
                     </ol>
                   </p>

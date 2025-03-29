@@ -19,7 +19,7 @@
                                 <th>Alamat</th>
                                 <th>No Telpon</th>
                                 <th>Email</th>
-                                <th>Action</th>
+                                <th>Menu</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -34,7 +34,7 @@
                                 <td>
                                     <div class="btn-group">
                                         <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            Aksi
+                                            Menu
                                         </button>
                                         <div class="dropdown-menu">
                                             <a class="dropdown-item" href="{{route('customer.show', $item->id)}}">

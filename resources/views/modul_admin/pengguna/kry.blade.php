@@ -1,6 +1,6 @@
 @extends('layouts.backend')
-@section('title','Admin - Data Karyawan')
-@section('header','Data Karyawan')
+@section('title', 'Admin - Data Karyawan')
+@section('header', 'Data Karyawan')
 @section('content')
 @if ($message = Session::get('success'))
 <div class="alert alert-success alert-block">
@@ -13,6 +13,7 @@
   <strong>{{ $message }}</strong>
 </div>
 @endif
+
 <div class="row">
   <div class="col-lg-12">
     <div class="card">
@@ -32,59 +33,55 @@
                 <th>Nama Cabang</th>
                 <th>No Telp</th>
                 <th>Status</th>
-                <th>Action</th>
+                <th>Menu</th>
               </tr>
             </thead>
             <tbody>
-              <?php $no = 1; ?>
               @foreach ($kry as $item)
               <tr>
-                <td>{{$no}}</td>
-                <td>{{$item->name}}</td>
-                <td>{{$item->email}}</td>
-                <td>{{$item->alamat_cabang}}</td>
-                <td>{{$item->nama_cabang}}</td>
-                <td>{{$item->no_telp}}</td>
+                <td>{{ $loop->iteration }}</td>
+                <td>{{ $item->name }}</td>
+                <td>{{ $item->email }}</td>
+                <td>{{ $item->alamat_cabang }}</td>
+                <td>{{ $item->nama_cabang }}</td>
+                <td>{{ $item->no_telp }}</td>
                 <td>
-                  @if ($item->status == 'Active')
-                  <span class="label label-success">Aktif</span>
-                  @else
-                  <span class="label label-danger">Tidak Aktif</span>
-                  @endif
+                  <span class="label label-{{ $item->status == 'Active' ? 'success' : 'danger' }}">
+                    {{ $item->status == 'Active' ? 'Aktif' : 'Tidak Aktif' }}
+                  </span>
                 </td>
                 <td>
                   <div class="btn-group">
                     <button type="button" class="btn btn-sm btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                      Aksi
+                      Menu
                     </button>
                     <div class="dropdown-menu">
                       <button class="dropdown-item edit-btn"
-                        data-id="{{$item->id}}"
-                        data-name="{{$item->name}}"
-                        data-email="{{$item->email}}"
-                        data-alamat_cabang="{{$item->alamat_cabang}}"
-                        data-nama_cabang="{{$item->nama_cabang}}"
-                        data-no_telp="{{$item->no_telp}}"
-                        data-status="{{$item->status}}"
+                        data-id="{{ $item->id }}"
+                        data-name="{{ $item->name }}"
+                        data-email="{{ $item->email }}"
+                        data-alamat_cabang="{{ $item->alamat_cabang }}"
+                        data-nama_cabang="{{ $item->nama_cabang }}"
+                        data-no_telp="{{ $item->no_telp }}"
+                        data-status="{{ $item->status }}"
                         data-toggle="modal"
                         data-target="#editKaryawanModal">
                         <i class="fas fa-edit"></i> Edit
                       </button>
-                      <form action="{{ route('karyawan.destroy',$item->id) }}" method="POST">
+                      <form action="{{ route('karyawan.destroy', $item->id) }}" method="POST">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Apakah Anda yakin ingin menghapus data ini?')">
                           <i class="fas fa-trash"></i> Hapus
                         </button>
                       </form>
-                      <a class="dropdown-item status-btn" href="#" data-id-update="{{$item->id}}">
-                        <i class="fas fa-power-off"></i> {{$item->status == 'Active' ? 'Non-Aktifkan' : 'Aktifkan'}}
+                      <a class="dropdown-item status-btn" href="#" data-id-update="{{ $item->id }}">
+                        <i class="fas fa-power-off"></i> {{ $item->status == 'Active' ? 'Non-Aktifkan' : 'Aktifkan' }}
                       </a>
                     </div>
                   </div>
                 </td>
               </tr>
-              <?php $no++; ?>
               @endforeach
             </tbody>
           </table>
@@ -104,7 +101,7 @@
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
-      <form id="editKaryawanForm" method="POST">
+      <form id="editKaryawanForm" action="{{ route('karyawan.update-data', ['id' => '__ID__']) }}" method="POST">
         @csrf
         @method('PUT')
         <div class="modal-body">
@@ -158,11 +155,42 @@
   $(document).on('click', '.status-btn', function(e) {
     e.preventDefault();
     var id = $(this).attr('data-id-update');
-    $.get('update-satatus-karyawan', {
-      '_token': $('meta[name=csrf-token]').attr('content'),
-      id: id
-    }, function(_resp) {
-      location.reload()
+
+    Swal.fire({
+      title: 'Konfirmasi',
+      text: "Apakah Anda yakin ingin mengubah status karyawan ini?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Ya, Ubah!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        $.ajax({
+          url: '{{ route("karyawan.update-status") }}',
+          type: 'GET',
+          data: {
+            '_token': '{{ csrf_token() }}',
+            'id': id
+          },
+          success: function(response) {
+            Swal.fire(
+              'Berhasil!',
+              'Status karyawan telah diubah.',
+              'success'
+            ).then(() => {
+              location.reload();
+            });
+          },
+          error: function() {
+            Swal.fire(
+              'Gagal!',
+              'Terjadi kesalahan saat mengubah status.',
+              'error'
+            );
+          }
+        });
+      }
     });
   });
 
@@ -172,8 +200,10 @@
     $('.edit-btn').click(function() {
       var id = $(this).data('id');
 
-      // Set form action URL
-      $('#editKaryawanForm').attr('action', '/karyawan/' + id);
+      // Set form action URL with the correct ID
+      var form = $('#editKaryawanForm');
+      var actionUrl = form.attr('action').replace('__ID__', id);
+      form.attr('action', actionUrl);
 
       // Populate form fields
       $('#edit_name').val($(this).data('name'));

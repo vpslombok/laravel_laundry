@@ -22,7 +22,7 @@
                     <h5>Installation</h5>
                     <ul>
                         <li>Install Composer and Npm</li>
-                        <li>Clone the repository: <code> git clone https://github.com/andes2912/laundry.git </code> </li>
+                        <li>Clone the repository: <code> </code> </li>
                         <li>Install dependencies: <code> composer install ; npm install ; npm run dev</code></li>
                         <li>Run cp .env.example .env for create .env file</li>
                         <li> Run php artisan migrate --seed for migration database</li>
@@ -30,6 +30,15 @@
                         <li> Run php artisan create:admin for create user Administrator</li>
                         <li> Run php artisan queue:listen for run queue</li>
                         <li>Run <code> php artisan serve</code> for start app</li>
+                    </ul>
+
+                    <h5>Fitur-fitur</h5>
+                    <ul>
+                        <li>Multi toko, dengan kata lain kamu bisa membuat cabang laundry.</li>
+                        <li>Manajemen Karyawan, untuk membuat akun karyawan.</li>
+                        <li>Manajemen Customer, untuk mengelola data customer.</li>
+                        <li>Manajemen Transaksi, untuk mengelola data transaksi.</li>
+                        <li>Notifikasi, untuk memberikan pemberitahuan kepada customer.</li>
                     </ul>
 
                     <h5>Credentials</h5>
@@ -61,7 +70,7 @@
                       <div class="avatar avatar-tag bg-light-primary mb-2 mx-auto">
                           <i class="font-medium-3 feather icon-message-circle"></i>
                       </div>
-                      <h4><a href="https://t.me/andridesmana">Telegram</a></h4>
+                      <h4><a href="">Telegram</a></h4>
                       <span class="text-body">Best way to get answer faster!</span>
                   </div>
               </div>
@@ -72,7 +81,7 @@
                       <div class="avatar avatar-tag bg-light-primary mb-2 mx-auto">
                           <i class="font-medium-3 feather icon-mail"></i>
                       </div>
-                      <h4><a href="mailto:andridesmana29@outlook.com">andridesmana29@outlook.com</a> </h4>
+                      <h4><a href="mailto:prmatamabayu@gmail.com">prmatamabayu@gmail.com</a> </h4>
                       <span class="text-body">Saya selalu senang mambantu!</span>
                   </div>
               </div>
