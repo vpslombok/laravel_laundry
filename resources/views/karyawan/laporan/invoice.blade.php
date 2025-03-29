@@ -8,11 +8,11 @@
         <div class="invoice-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; color: white;">
             <div class="row">
                 <div class="col-md-6">
-                    <h2 style="margin: 0; font-weight: 600;"><i class="fa fa-file-text-o"></i> INVOICE LAUNDRY</h2>
+                    <h2 style="margin: 0; font-weight: 600; color: #f0f0f0;"><i class="fa fa-file-text-o"></i> INVOICE LAUNDRY</h2>
                     <p style="margin: 5px 0 0; opacity: 0.9;">{{$data->user->nama_cabang}}</p>
                 </div>
                 <div class="col-md-6 text-right">
-                    <h3 style="margin: 0; font-weight: 600;">#{{$data->invoice}}</h3>
+                    <h3 style="margin: 0; font-weight: 600; color: #f0f0f0;">#{{$data->invoice}}</h3>
                     <p style="margin: 5px 0 0; opacity: 0.9;">
                         {{\Carbon\Carbon::parse($data->tgl_transaksi)->format('d F Y')}}
                     </p>
@@ -124,10 +124,24 @@
                     <h5 style="color: #764ba2; margin-bottom: 15px;">
                         <i class="fa fa-credit-card"></i> Metode Pembayaran
                     </h5>
+                    @if($data->jenis_pembayaran == 'Transfer')
+                    <div style="background: white; padding: 10px 15px; border-radius: 5px; display: inline-block;">
+                        <i class="fa fa-check-circle" style="color: #28a745;"></i>
+                        <span style="margin-left: 5px; font-weight: 500;">{{$data->jenis_pembayaran}}</span>
+                        @foreach($bank as $b)
+                        <div class="bank-info">
+                            <span class="bank-name">{{$b->nama_bank ?? 'Tidak Tersedia'}}-</span>
+                            <span class="bank-account">{{$b->no_rekening ?? 'Tidak Tersedia'}}-</span>
+                            <span class="account-holder">{{$b->nama_pemilik ?? 'Tidak Tersedia'}}</span>
+                        </div>
+                        @endforeach
+                    </div>
+                    @else
                     <div style="background: white; padding: 10px 15px; border-radius: 5px; display: inline-block;">
                         <i class="fa fa-check-circle" style="color: #28a745;"></i>
                         <span style="margin-left: 5px; font-weight: 500;">{{$data->jenis_pembayaran}}</span>
                     </div>
+                    @endif
                 </div>
             </div>
             <div class="col-md-6">
@@ -143,6 +157,12 @@
                     <div class="summary-item" style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px;">
                         <span style="display: inline-block; width: 150px; text-align: right; padding-right: 15px; font-weight: bold; font-size: 16px;">Total Bayar:</span>
                         <span style="display: inline-block; width: 150px; text-align: right; font-weight: bold; font-size: 18px; color: #764ba2;">{{Rupiah::getRupiah($item->harga_akhir)}}</span>
+                        <span style="display: inline-block; width: 150px; text-align: right; padding-right: 15px; font-weight: bold; font-size: 16px;">Status :</span>
+                        @if($item->status_payment == 'Success')
+                        <span style="display: inline-block; width: 150px; text-align: right; font-weight: bold; font-size: 18px; color: green;">Lunas</span>
+                        @else
+                        <span style="display: inline-block; width: 150px; text-align: right; font-weight: bold; font-size: 18px; color: red;">{{$item->status_payment}}</span>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -198,4 +218,7 @@
         }
     }
 </style>
+<script>
+    
+</script>
 @endsection

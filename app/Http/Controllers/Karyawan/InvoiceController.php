@@ -24,7 +24,7 @@ class InvoiceController extends Controller
       ->where('id', $request->id)
       ->first();
 
-    $bank = DataBank::get();
+    $bank = DataBank::all();
     return view('karyawan.laporan.invoice', compact('invoice', 'data', 'bank'));
   }
 

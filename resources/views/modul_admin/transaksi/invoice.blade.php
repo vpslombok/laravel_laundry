@@ -70,11 +70,11 @@
                         <span class="info-label"><i class="fa fa-calendar-times-o"></i> Tanggal Diambil:</span>
                         <span class="info-value">
                             @foreach($invoice as $item)
-                                @if($item->tgl_ambil == "")
-                                    Status masih {{$item->status_order}}
-                                @else
-                                    {{carbon\carbon::parse($item->tgl_ambil)->format('d F Y H:i')}}
-                                @endif
+                            @if($item->tgl_ambil == "")
+                            Status masih {{$item->status_order}}
+                            @else
+                            {{carbon\carbon::parse($item->tgl_ambil)->format('d F Y H:i')}}
+                            @endif
                             @endforeach
                         </span>
                     </div>
@@ -120,8 +120,27 @@
         <div class="row p-4" style="background: #f9f9f9; border-top: 1px solid #eee;">
             <div class="col-md-6">
                 <div class="payment-method">
-                    <h5 class="text-primary">Metode Pembayaran</h5>
-                    <p>Transfer Bank / Tunai</p>
+                    <h5 style="color: #764ba2; margin-bottom: 15px;">
+                        <i class="fa fa-credit-card"></i> Metode Pembayaran
+                    </h5>
+                    @if($dataInvoice->jenis_pembayaran == 'Transfer')
+                    <div style="background: white; padding: 10px 15px; border-radius: 5px; display: inline-block;">
+                        <i class="fa fa-check-circle" style="color: #28a745;"></i>
+                        <span style="margin-left: 5px; font-weight: 500;">{{$dataInvoice->jenis_pembayaran}}</span>
+                        @foreach($bank as $b)
+                        <div class="bank-info">
+                            <span class="bank-name">{{$b->nama_bank ?? 'Tidak Tersedia'}}-</span>
+                            <span class="bank-account">{{$b->no_rekening ?? 'Tidak Tersedia'}}-</span>
+                            <span class="account-holder">{{$b->nama_pemilik ?? 'Tidak Tersedia'}}</span>
+                        </div>
+                        @endforeach
+                    </div>
+                    @else
+                    <div style="background: white; padding: 10px 15px; border-radius: 5px; display: inline-block;">
+                        <i class="fa fa-check-circle" style="color: #28a745;"></i>
+                        <span style="margin-left: 5px; font-weight: 500;">{{$dataInvoice->jenis_pembayaran}}</span>
+                    </div>
+                    @endif
                 </div>
             </div>
             <div class="col-md-6">
@@ -137,6 +156,12 @@
                     <div class="summary-item" style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px;">
                         <span class="summary-label" style="font-weight: bold; font-size: 16px;">Total Bayar:</span>
                         <span class="summary-value" style="font-weight: bold; font-size: 18px; color: #2575fc;">{{Rupiah::getRupiah($total - (($total * $item->disc) / 100))}}</span>
+                        <span style="display: inline-block; width: 150px; text-align: right; padding-right: 15px; font-weight: bold; font-size: 16px;">Status :</span>
+                        @if($item->status_payment == 'Success')
+                        <span style="display: inline-block; width: 150px; text-align: right; font-weight: bold; font-size: 18px; color: green;">{{$item->status_payment}}</span>
+                        @else
+                        <span style="display: inline-block; width: 150px; text-align: right; font-weight: bold; font-size: 18px; color: red;">{{$item->status_payment}}</span>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -153,9 +178,6 @@
                 <a href="{{route('transaksi.index')}}" class="btn btn-light" style="border: 1px solid #ddd;">
                     <i class="fa fa-arrow-left"></i> Kembali
                 </a>
-                <button id="print" class="btn btn-primary" type="button">
-                    <i class="fa fa-print"></i> Cetak Invoice
-                </button>
             </div>
         </div>
     </div>
@@ -227,17 +249,4 @@
         }
     }
 </style>
-
-<script>
-    $(document).ready(function() {
-        $('#print').click(function() {
-            var printContents = $('.printableArea').html();
-            var originalContents = document.body.innerHTML;
-
-            document.body.innerHTML = printContents;
-            window.print();
-            document.body.innerHTML = originalContents;
-        });
-    });
-</script>
 @endsection

@@ -131,9 +131,9 @@ class SettingsController extends Controller
     $notif->email = $request->email ?? 0;
     $notif->telegram_channel_masuk = $request->telegram_channel_masuk ?? '';
     $notif->telegram_channel_selesai = $request->telegram_channel_selesai ?? '';
-    $notif->wa_api_url = $request->wa_api_url;
     $notif->wa_order_selesai = $request->wa_order_selesai ?? 0;
-    $notif->api_key = $request->api_key;
+    $notif->wa_api_url = $request->wa_api_url ?? '';
+    $notif->api_key = $request->api_key ?? '';
     $notif->save();
 
     Session::flash('success', 'Notifications Berhasil Diupdate !');

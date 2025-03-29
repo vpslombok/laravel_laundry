@@ -35,100 +35,175 @@ class PelayananController extends Controller
 
   private function generateNotaImage($order)
   {
-    $font = realpath(public_path('storage/fonts/Poppins-Italic.ttf'));
-    if (!$font) {
-      die("Path font tidak ditemukan!");
+    $fontBold = realpath(public_path('storage/fonts/Poppins-Bold.ttf'));
+    $fontRegular = realpath(public_path('storage/fonts/Poppins-Regular.ttf'));
+    if (!$fontBold || !$fontRegular) {
+      die("Font files not found!");
     }
 
-    $companyName = PageSettings::first()->judul;
+    // Company Information
+    $companyName = "Maudy Laundry";
+    $branch = "Lombok";
+    $phone = "Telp: 6281990210988";
+    $address = "Lombok Timur NTB";
 
-    $lineSpacing = 25;
-    $margin = 20;
-    $maxWidth = 0;
-    $posY = 50;
-    $texts = [
-      "TANGGAL   : " . date('d/m/Y H:i', strtotime($order->tgl_transaksi)),
-      "NO RESI   : " . $order->invoice,
-      "NAMA      : " . $order->customers->name,
-      "LAYANAN   : " . harga::where('id', $order->harga_id)->first()->jenis,
-      "HARGA/KG  : Rp " . number_format(harga::where('id', $order->harga_id)->first()->harga, 0, ',', '.'),
-      "BERAT     : " . $order->kg . " Kg",
-      "TOTAL     : Rp " . number_format($order->harga_akhir, 0, ',', '.'),
-      "ESTIMASI HARI : " . $order->hari . " Hari",
-    ];
+    // Customer Information
+    $customer = $order->customers->name;
+    $customerPhone = $order->customers->phone ?? '-';
+    $customerAddress = $order->customers->address ?? '-';
 
-    if ($order->status_payment == 'Pending') {
-      $texts[] = "STATUS PEMBAYARAN : BELUM LUNAS";
-    } else if ($order->status_payment == 'Success') {
-      $texts[] = "STATUS PEMBAYARAN : LUNAS";
-    }
+    // Design parameters
+    $maxWidth = 380; // Thermal printer width
+    $margin = 15;
+    $lineSpacing = 20;
+    $sectionSpacing = 15;
+    $posY = 30;
 
-    $hari = $order->hari;
-    $created_at = $order->created_at;
-    $estimasi = $created_at->addDays($hari);
-    $texts[] = "ESTIMASI SELESAI  : " . $estimasi->format('d/m/Y') . "\n";
-
-    $footerText = "** Terima Kasih Sudah Menggunakan Layanan Kami **\n";
-    $texts[] = $footerText;
-
-    foreach ($texts as $text) {
-      $bbox = imagettfbbox(12, 0, $font, $text);
-      $textWidth = $bbox[2] - $bbox[0];
-      $maxWidth = max($maxWidth, $textWidth);
-    }
-
-    // Hitung ukuran nama perusahaan agar bisa ditaruh di tengah
-    $bboxCompany = imagettfbbox(14, 0, $font, $companyName);
-    $companyWidth = $bboxCompany[2] - $bboxCompany[0];
-    $maxWidth = max($maxWidth, $companyWidth);
-
-    // Ukuran QR Code Dinamis (maksimal 150x150)
-    $qrCodeSize = min(150, $maxWidth - 40);
-
-    $imgWidth = $maxWidth + ($margin * 2);
-    $imgHeight = $posY + (count($texts) * $lineSpacing) + $qrCodeSize + 60; // Tambah ruang untuk QR Code
-
-    $img = imagecreatetruecolor($imgWidth, $imgHeight);
+    // Create image
+    $img = imagecreatetruecolor($maxWidth, 1200);
     $white = imagecolorallocate($img, 255, 255, 255);
     $black = imagecolorallocate($img, 0, 0, 0);
-    $gray = imagecolorallocate($img, 200, 200, 200);
+    $gray = imagecolorallocate($img, 150, 150, 150);
 
-    imagefilledrectangle($img, 0, 0, $imgWidth, $imgHeight, $white);
+    imagefilledrectangle($img, 0, 0, $maxWidth, 1200, $white);
 
-    // Tambahkan nama perusahaan di tengah atas
-    $companyX = ($imgWidth - $companyWidth) / 2;
-    imagettftext($img, 14, 0, $companyX, 30, $black, $font, $companyName);
+    // ========== HEADER SECTION ==========
+    // Company Name (centered)
+    $companySize = 16;
+    $companyWidth = imagettfbbox($companySize, 0, $fontBold, $companyName)[2];
+    imagettftext($img, $companySize, 0, ($maxWidth - $companyWidth) / 2, $posY, $black, $fontBold, $companyName);
+    $posY += 25;
 
-    $posY = 60; // Geser ke bawah untuk memberi ruang nama perusahaan
-    foreach ($texts as $text) {
-      imagettftext($img, 12, 0, $margin, $posY, $black, $font, $text);
-      $posY += $lineSpacing;
-    }
+    // Date (centered)
+    $dateText = date('d/m/Y H:i', strtotime($order->tgl_transaksi));
+    $dateWidth = imagettfbbox(10, 0, $fontRegular, $dateText)[2];
+    imagettftext($img, 10, 0, ($maxWidth - $dateWidth) / 2, $posY, $black, $fontRegular, $dateText);
+    $posY += 20;
 
-    imageline($img, $margin, $posY, $imgWidth - $margin, $posY, $gray);
+    // Divider line
+    imageline($img, $margin, $posY, $maxWidth - $margin, $posY, $gray);
+    $posY += $sectionSpacing;
 
-    // ** Tambahkan QR Code langsung ke gambar tanpa menyimpan file **
-    $qrCode = QrCode::format('png')->size($qrCodeSize)->generate($order->invoice);
-    $qrCodeImage = imagecreatefromstring($qrCode);
+    // ========== BRANCH INFO SECTION ==========
+    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Cabang:");
+    imagettftext($img, 10, 0, $margin + 60, $posY, $black, $fontRegular, $branch);
+    $posY += $lineSpacing;
 
-    if ($qrCodeImage) {
-      $qrCodeWidth = imagesx($qrCodeImage);
-      $qrCodeHeight = imagesy($qrCodeImage);
+    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Telp:");
+    imagettftext($img, 10, 0, $margin + 60, $posY, $black, $fontRegular, $phone);
+    $posY += $lineSpacing;
 
-      // Tempatkan QR code di bagian bawah tengah
-      $qrCodeX = ($imgWidth - $qrCodeWidth) / 2;
-      $qrCodeY = $posY + 20;
+    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Alamat:");
+    imagettftext($img, 10, 0, $margin + 60, $posY, $black, $fontRegular, $address);
+    $posY += $sectionSpacing;
 
-      imagecopy($img, $qrCodeImage, $qrCodeX, $qrCodeY, 0, 0, $qrCodeWidth, $qrCodeHeight);
-      imagedestroy($qrCodeImage);
-    }
+    // Divider line
+    imageline($img, $margin, $posY, $maxWidth - $margin, $posY, $gray);
+    $posY += $sectionSpacing;
 
-    $fileName = 'nota_' . $order->invoice . '.png';
-    $filePath = storage_path('app/public/' . $fileName);
-    imagepng($img, $filePath);
+    // ========== CUSTOMER INFO SECTION ==========
+    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Pelanggan:");
+    imagettftext($img, 10, 0, $margin + 80, $posY, $black, $fontRegular, $customer);
+    $posY += $lineSpacing;
+
+    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Telp:");
+    imagettftext($img, 10, 0, $margin + 80, $posY, $black, $fontRegular, $customerPhone);
+    $posY += $lineSpacing;
+
+    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Alamat:");
+    imagettftext($img, 10, 0, $margin + 80, $posY, $black, $fontRegular, $customerAddress);
+    $posY += $sectionSpacing;
+
+    // Divider line
+    imageline($img, $margin, $posY, $maxWidth - $margin, $posY, $gray);
+    $posY += $sectionSpacing;
+
+    // ========== SERVICE TABLE SECTION ==========
+    // Table Header
+    $col1 = 15;  // Layanan
+    $col2 = 150; // Berat
+    $col3 = 220; // Harga
+    $col4 = 300; // Subtotal
+
+    imagettftext($img, 10, 0, $col1, $posY, $black, $fontBold, "Layanan");
+    imagettftext($img, 10, 0, $col2, $posY, $black, $fontBold, "Berat");
+    imagettftext($img, 10, 0, $col3, $posY, $black, $fontBold, "Harga");
+    imagettftext($img, 10, 0, $col4, $posY, $black, $fontBold, "Subtotal");
+    $posY += $lineSpacing;
+
+    // Service Row
+    $serviceName = harga::where('id', $order->harga_id)->first()->jenis;
+    $weight = $order->kg . " kg";
+    $price = "Rp " . number_format(harga::where('id', $order->harga_id)->first()->harga, 0, ',', '.');
+    $subtotal = "Rp " . number_format($order->harga_akhir, 0, ',', '.');
+
+    imagettftext($img, 10, 0, $col1, $posY, $black, $fontRegular, $serviceName);
+    imagettftext($img, 10, 0, $col2, $posY, $black, $fontRegular, $weight);
+    imagettftext($img, 10, 0, $col3, $posY, $black, $fontRegular, $price);
+    imagettftext($img, 10, 0, $col4, $posY, $black, $fontRegular, $subtotal);
+    $posY += $lineSpacing + 10;
+
+    // Summary
+    imagettftext($img, 10, 0, $col3, $posY, $black, $fontBold, "Subtotal:");
+    imagettftext($img, 10, 0, $col4, $posY, $black, $fontRegular, $subtotal);
+    $posY += $lineSpacing;
+
+    imagettftext($img, 10, 0, $col3, $posY, $black, $fontBold, "Diskon (0%):");
+    imagettftext($img, 10, 0, $col4, $posY, $black, $fontRegular, "-");
+    $posY += $lineSpacing;
+
+    imagettftext($img, 10, 0, $col3, $posY, $black, $fontBold, "TOTAL:");
+    imagettftext($img, 10, 0, $col4, $posY, $black, $fontBold, $subtotal);
+    $posY += $sectionSpacing;
+
+    // Payment Info
+    $paymentStatus = ($order->status_payment == 'Success') ? "Tunai" : "Belum Lunas";
+    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Pembayaran:");
+    imagettftext($img, 10, 0, $margin + 90, $posY, $black, $fontRegular, $paymentStatus);
+    $posY += $lineSpacing;
+
+    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Tgl Masuk:");
+    imagettftext($img, 10, 0, $margin + 90, $posY, $black, $fontRegular, date('d/m/Y H:i', strtotime($order->tgl_transaksi)));
+    $posY += $lineSpacing;
+
+    $completionDate = date('d/m/Y H:i', strtotime($order->tgl_transaksi . ' + ' . $order->hari . ' days'));
+    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Estimasi Selesai:");
+    imagettftext($img, 10, 0, $margin + 90, $posY, $black, $fontRegular, $completionDate);
+    $posY += $sectionSpacing;
+
+    // Divider line
+    imageline($img, $margin, $posY, $maxWidth - $margin, $posY, $gray);
+    $posY += $sectionSpacing;
+
+    // Invoice Number
+    $invoiceText = "No Resi #" . $order->invoice;
+    $invoiceWidth = imagettfbbox(10, 0, $fontBold, $invoiceText)[2];
+    imagettftext($img, 10, 0, ($maxWidth - $invoiceWidth) / 2, $posY, $black, $fontBold, $invoiceText);
+    $posY += $lineSpacing;
+
+    // Footer
+    $footerText = "Terima kasih telah menggunakan layanan kami";
+    $footerWidth = imagettfbbox(10, 0, $fontRegular, $footerText)[2];
+    imagettftext($img, 10, 0, ($maxWidth - $footerWidth) / 2, $posY, $black, $fontRegular, $footerText);
+    $posY += 30;
+
+    // Crop to actual content height
+    $croppedImg = imagecreatetruecolor($maxWidth, $posY);
+    imagecopy($croppedImg, $img, 0, 0, 0, 0, $maxWidth, $posY);
     imagedestroy($img);
 
-    return asset('storage/' . $fileName);
+    // Save the image
+    $fileName = 'nota_' . $order->invoice . '.png';
+    $filePath = storage_path('app/public/nota/' . $fileName);
+
+    if (!file_exists(dirname($filePath))) {
+      mkdir(dirname($filePath), 0777, true);
+    }
+
+    imagepng($croppedImg, $filePath);
+    imagedestroy($croppedImg);
+
+    return asset('storage/nota/' . $fileName);
   }
 
   public function histori()
@@ -303,9 +378,9 @@ class PelayananController extends Controller
   {
 
     $harga = Harga::select('id', 'harga') // Benar
-    ->where('user_id', Auth::id())
-    ->where('id', $request->id)
-    ->first();
+      ->where('user_id', Auth::id())
+      ->where('id', $request->id)
+      ->first();
 
 
     // Cek apakah harga ditemukan
@@ -355,25 +430,21 @@ class PelayananController extends Controller
     return $customer;
   }
 
-
-  // Update Status Laundry
   public function updateStatusLaundry(Request $request)
   {
-    $transaksi = transaksi::find($request->id);
-    if ($transaksi->status_payment == 'Pending') {
-      $transaksi->update([
-        'status_payment' => 'Success'
-      ]);
-    } elseif ($transaksi->status_payment == 'Success') {
+    DB::beginTransaction();
+    try {
+      $transaksi = transaksi::findOrFail($request->id);
+
+      // Handle Process -> Done transition
       if ($transaksi->status_order == 'Process') {
         $transaksi->update([
           'status_order' => 'Done'
         ]);
 
-        // Tambah point +1
+        // Add point
         $points = User::where('id', $transaksi->customer_id)->firstOrFail();
-        $points->point =  $points->point + 1;
-        $points->update();
+        $points->increment('point');
 
         // Create Notifikasi
         $id         = $transaksi->id;
@@ -385,12 +456,16 @@ class PelayananController extends Controller
 
         // Cek email notif
         if (setNotificationEmail(1) == 1) {
-
           // Menyiapkan data
           $data = array(
             'email'           => $transaksi->email_customer,
             'invoice'         => $transaksi->invoice,
             'customer'        => $transaksi->customer,
+            'nama_laundry'    => Auth::user()->nama_cabang,
+            'alamat_laundry'  => Auth::user()->alamat_cabang,
+            'tanggal_selesai' => $transaksi->tgl_ambil,
+            'total_harga'     => $transaksi->harga_akhir,
+            'email_laundry'   => Auth::user()->email_cabang,
             'nama_laundry'    => Auth::user()->nama_cabang,
             'alamat_laundry'  => Auth::user()->alamat_cabang,
           );
@@ -409,20 +484,48 @@ class PelayananController extends Controller
           $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message';
           $createdAt = \Carbon\Carbon::parse($transaksi->created_at);
           $updatedAt = \Carbon\Carbon::parse($transaksi->updated_at);
-          $lamaPengerjaan = $createdAt->diffInDays($updatedAt); // Hitung selisih hari
+          $lamaPengerjaan = $createdAt->diffForHumans($updatedAt, true); // Hitung selisih hingga jam, menit, detik
           $jenisLayanan = harga::where('id', $transaksi->harga_id)->first()->jenis;
 
           $data = [
-            'number' =>  $transaksi->customers->no_telp,
-            'message' => "🌟 Halo Kak *{$transaksi->customers->name}* 🌟\n\n" .
-              "Kami punya kabar baik nih! 🎉 Laundry Kakak dengan No Resi *{$transaksi->invoice}* sudah selesai dan siap untuk diambil. 🧺✨\n\n" .
-              "📅 *Detail Transaksi:*\n" .
-              "• 🏷️ *Layanan:* {$jenisLayanan}\n" .
-              "• ⚖️ *Berat:* {$transaksi->kg} Kg\n" .
-              "• ⏳ *Lama Pengerjaan:* {$lamaPengerjaan} Hari\n" .
-              "• 💰 *Total Biaya:* Rp " . number_format($transaksi->harga_akhir, 0, ',', '.') . "\n\n" .
-              "Silakan datang ke outlet kami untuk mengambilnya. Jangan lupa, pakaian bersih dan wangi sudah menanti! 😍\n\n" .
-              "Terima kasih telah menggunakan layanan kami. Semoga hari Kakak menyenangkan! 😊🙏"
+            'number' => $transaksi->customers->no_telp,
+            'message' => "*" . strtoupper(Auth::user()->nama_cabang) . "*\n" .
+              str_repeat("=", 25) . "\n" .
+              "📋 *NOTA ELEKTRONIK*\n" .
+              str_repeat("=", 25) . "\n\n" .
+
+              "📍 *Outlet*:\n" .
+              Auth::user()->nama_cabang . "\n" .
+              Auth::user()->alamat_cabang . "\n" .
+              "📞 " . Auth::user()->no_telp_cabang . "\n\n" .
+
+              str_repeat("-", 25) . "\n" .
+              "🔹 *No. Nota*: " . $transaksi->invoice . "\n" .
+              "👤 *Pelanggan*: " . $transaksi->customers->name . "\n" .
+              "📥 *Tgl Masuk*: " . \Carbon\Carbon::parse($transaksi->created_at)->format('d/m/Y - H:i') . "\n" .
+              "📤 *Estimasi*: " . \Carbon\Carbon::parse($transaksi->estimasi_selesai)->format('d/m/Y - H:i') . "\n" .
+              "⏱ *Lama Kerja*: " . $lamaPengerjaan . "\n\n" .
+
+              str_repeat("-", 25) . "\n" .
+              "🧺 *Detail Layanan*\n" .
+              str_repeat("-", 25) . "\n" .
+              "▪ " . $jenisLayanan . "\n" .
+              "▪ " . $transaksi->kg . " Kg × Rp " . number_format($transaksi->harga, 0, ',', '.') . "\n" .
+
+              str_repeat("-", 25) . "\n" .
+              "💳 *Status*: " . ($transaksi->status_payment == 'Success' ? '✅ LUNAS' : '⌛ BELUM BAYAR') . "\n" .
+              "📝 *Catatan*: " . $transaksi->keterangan . "\n\n" .
+
+              str_repeat("=", 25) . "\n" .
+              "💰 *RINCIAN BIAYA*\n" .
+              str_repeat("=", 25) . "\n" .
+              "Subtotal : Rp " . number_format($transaksi->harga * $transaksi->kg, 0, ',', '.') . "\n" .
+              "Diskon   : Rp " . number_format(($transaksi->harga * $transaksi->kg * ($transaksi->diskon ?? 0)) / 100, 0, ',', '.') . "\n" .
+              str_repeat("-", 25) . "\n" .
+              "TOTAL    : Rp " . number_format($transaksi->harga_akhir, 0, ',', '.') . "\n\n" .
+
+              "Terima kasih telah menggunakan layanan kami.\n" .
+              "Pakaian siap diambil di outlet kami."
           ];
 
           // Kirim data menggunakan cURL dengan melewati pemeriksaan SSL
@@ -442,26 +545,41 @@ class PelayananController extends Controller
           curl_close($ch);
 
           $responseData = json_decode($response, true);
-
-          // Simpan isi $data dan respon API ke log
           \Log::info('Data WhatsApp: ' . json_encode($data) . ' Respon WhatsApp: ' . json_encode($responseData));
-
-          // Menampilkan respon API dan menghentikan eksekusi
-          return response()->json($responseData);
         }
-      } elseif ($transaksi->status_order == 'Done') {
+        DB::commit();
+        Session::flash('success', "Status Laundry Berhasil Diubah !");
+        return response()->json(['success' => true]);
+      }
+
+      // Handle Done -> Payment Success transition
+      if ($transaksi->status_order == 'Done' && $transaksi->status_payment == 'Pending') {
+        $transaksi->update([
+          'status_payment' => 'Success'
+        ]);
+        DB::commit();
+        Session::flash('success', "Status Pembayaran Berhasil Diubah !");
+        return response()->json(['success' => true]);
+      }
+
+      // Handle Done -> DiTerima transition
+      if ($transaksi->status_order == 'Done') {
         $transaksi->update([
           'status_order' => 'DiTerima',
           'tgl_ambil' => Carbon::now()->format('d-m-Y H:i:s')
         ]);
-      }
-    }
 
-    if ($transaksi->status_payment == 'Success') {
-      Session::flash('success', "Status Pembayaran Berhasil Diubah !");
-    }
-    if ($transaksi->status_order == 'Done' || $transaksi->status_order == 'DiTerima') {
-      Session::flash('success', "Status Laundry Berhasil Diubah !");
+        DB::commit();
+        Session::flash('success', "Status Laundry Berhasil Diubah !");
+        return response()->json(['success' => true]);
+      }
+
+      DB::commit();
+      return response()->json(['success' => false, 'message' => 'No valid status transition']);
+    } catch (\Exception $e) {
+      DB::rollBack();
+      \Log::error("Update status error: " . $e->getMessage());
+      return response()->json(['error' => $e->getMessage()], 500);
     }
   }
 }

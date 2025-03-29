@@ -21,6 +21,9 @@
   <link rel="stylesheet" type="text/css" href="{{secure_asset('backend/vendors/css/extensions/shepherd-theme-default.css')}}">
   <link rel="stylesheet" type="text/css" href="{{secure_asset('backend/vendors/css/tables/datatable/datatables.min.css')}}">
   <link rel="stylesheet" type="text/css" href="{{secure_asset('backend/vendors/css/charts/apexcharts.css')}}">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
+  <link href="{{secure_asset('frontend/plugins/font-awesome/css/font-awesome.min.css')}}" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous" />
   <!-- END: Vendor CSS-->
 
   <!-- BEGIN: Theme CSS-->
@@ -176,6 +179,12 @@
             </li>
             <li class="nav-item {{ (request()->is('data-harga')) ? 'active' : '' }}">
               <a href="{{url('data-harga')}}"><i class="feather icon-circle"></i><span class="menu-item" data-i18n="List">Harga Laundry</span></a>
+            </li>
+            <li class="nav-item {{ (request()->is('pengeluaran')) ? 'active' : '' }}">
+              <a href="{{url('pengeluaran')}}"><i class="feather icon-circle"></i><span class="menu-item" data-i18n="List">Pengeluaran</span></a>
+            </li>
+            <li class="nav-item {{ (request()->is('report-laba')) ? 'active' : '' }}">
+              <a href="{{url('report-laba')}}"><i class="feather icon-circle"></i><span class="menu-item" data-i18n="List">Report Laba</span></a>
             </li>
           </ul>
         </li>

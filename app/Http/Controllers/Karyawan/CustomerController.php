@@ -82,6 +82,7 @@ class CustomerController extends Controller
           'nama_laundry'    => Auth::user()->nama_cabang,
           'alamat_laundry'  => Auth::user()->alamat_cabang,
           'no_telp'         => $addCustomer->no_telp,
+          'email_laundry'   => Auth::user()->email, // Tambahkan ini untuk mengatasi error undefined array key "email_laundry"
         );
         // Kirim email
         if (setNotificationEmail(1) == 1) {
@@ -90,8 +91,7 @@ class CustomerController extends Controller
         // Kirim WhatsApp
         if (setNotificationWhatsappOrderSelesai(1) == 1) {
           $nameCustomer = $addCustomer->name; // get name customer
-          $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url; // URL API WhatsApp
-          $apiKey = notifications_setting::where('id', 1)->first()->api_key; // get API Key dari database
+          $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message'; // URL API WhatsApp
           $message = "Halo Kak *$nameCustomer* 😊\n\n"
             . "Akun Anda telah berhasil dibuat. Berikut adalah informasi login Anda:\n\n"
             . "Email: $addCustomer->email\n"
@@ -99,9 +99,7 @@ class CustomerController extends Controller
             . "URL Login: " . url('/login') . "\n\n"
             . "Silakan login menggunakan informasi di atas. Terima kasih telah memilih layanan kami! Semoga hari Anda menyenangkan! 🌟";
           $data = [
-            'api_key' => $apiKey,
-            'number' => '62' . ltrim($addCustomer->no_telp, '0'), // Nomor penerima
-            'sender' => '6285333640674', // Nomor perangkat Anda
+            'number' => $addCustomer->no_telp,
             'message' => $message,
           ];
           $ch = curl_init($waApiUrl);

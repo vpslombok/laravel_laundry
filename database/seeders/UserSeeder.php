@@ -18,14 +18,13 @@ class UserSeeder extends Seeder
         $users = User::first();
         $user = User::create([
             'name' => 'Admin',
-            'email' => 'admin@gmail.com',
+            'email' => 'lombokpdhas@gmail.com',
             'password' => Hash::make('12345'),
             'auth' => 'Admin',
             'status' => 'Active',
             'nama_cabang' => 'Cabang Utama',
-            'alamat_cabang' => 'Jl. Utama No. 1',
-            'alamat' => 'Jl. Admin No. 99',
-            'no_telp' => '081918408597',
+            'alamat_cabang' => 'Lombok, Nusa Tenggara Barat, Indonesia',
+            'no_telp' => '081122334455',
             'email_verified_at' => now(),
             'remember_token' => null,
             'created_at' => now(),

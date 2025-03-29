@@ -47,7 +47,7 @@
                             </span>
                         </td>
                         <td>
-                            <span class="label label-{{ $item->status_payment == 'Success' ? 'success' : 'info' }}">
+                            <span class="badge bg-{{ $item->status_payment == 'Success' ? 'success' : 'danger' }}">
                                 {{ $item->status_payment == 'Success' ? 'Lunas' : 'Pending' }}
                             </span>
                         </td>
@@ -55,18 +55,17 @@
                         <td>{{ Rupiah::getRupiah($item->harga_akhir) }}</td>
                         <td>
                             <div class="btn-group">
-                                @if ($item->status_payment == 'Pending')
-                                <a class="btn btn-sm btn-danger updateStatus"
-                                    style="color:white"
-                                    data-id="{{ $item->id }}"
-                                    data-status="Bayar">Bayar</a>
-                                @elseif($item->status_payment == 'Success')
                                 @if ($item->status_order == 'Process')
                                 <a class="btn btn-sm btn-info updateStatus"
                                     style="color:white"
                                     data-id="{{ $item->id }}"
                                     data-status="Selesai">Selesai</a>
                                 @elseif($item->status_order == 'Done')
+                                @if ($item->status_payment == 'Pending')
+                                <a class="btn btn-sm btn-danger updateStatusPayment"
+                                    style="color:white"
+                                    data-id="{{ $item->id }}">Bayar</a>
+                                @elseif($item->status_payment == 'Success')
                                 <a class="btn btn-sm btn-info updateStatus"
                                     style="color:white"
                                     data-id="{{ $item->id }}"
@@ -76,7 +75,6 @@
                                 <a href="{{ url('invoice-kar', $item->id) }}" class="btn btn-sm btn-warning" style="color:white">Invoice</a>
                             </div>
                         </td>
-
                     </tr>
                     @endforeach
                 </tbody>
@@ -93,9 +91,43 @@
         $('#orderTable').DataTable();
     });
 
+    $(document).on('click', '.updateStatusPayment', function() {
+        var id = $(this).data('id');
+
+        Swal.fire({
+            title: "Konfirmasi",
+            text: "Apakah kamu yakin ingin mengubah status pembayaran menjadi Lunas?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Ya, Bayar!",
+            cancelButtonText: "Batal"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: "{{ route('update.status.laundry') }}",
+                    type: "GET",
+                    data: {
+                        id: id,
+                        _token: "{{ csrf_token() }}"
+                    },
+                    success: function(response) {
+                        Swal.fire("Berhasil!", "Status pembayaran telah diperbarui menjadi Lunas.", "success").then(() => {
+                            location.reload();
+                        });
+                    },
+                    error: function() {
+                        Swal.fire("Error!", "Terjadi kesalahan saat memperbarui status pembayaran.", "error");
+                    }
+                });
+            }
+        });
+    });
+
     $(document).on('click', '.updateStatus', function() {
         var id = $(this).data('id');
-        var status = $(this).data('status'); // Ambil status dari tombol yang diklik
+        var status = $(this).data('status');
 
         Swal.fire({
             title: "Konfirmasi",
@@ -128,5 +160,4 @@
         });
     });
 </script>
-
 @endsection

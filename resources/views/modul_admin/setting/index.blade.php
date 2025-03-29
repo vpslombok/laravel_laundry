@@ -319,7 +319,7 @@
                       <h5 class="m-1">API Key</h5>
                       <div class="col-md-12 mb-1">
                         <div class="form-group">
-                          <input type="text" name="api_key" class="form-control" placeholder="Masukan API Key" value="{{$setnotif->api_key}}"">
+                          <input type="text" name="api_key" class="form-control" placeholder="Masukan API Key" value="{{$setnotif->api_key}}">
                           @if ($setnotif->wa_order_selesai == 1)
                           @if ($setnotif->api_key == '')
                           <small class="text-danger">API Key wajib diisi.</small>

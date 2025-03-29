@@ -22,6 +22,8 @@ class transaksi extends Model
       return $this->belongsTo(User::class,'customer_id','id')->where('auth','Customer');
     }
 
+    
+
     public function user()
     {
       return $this->belongsTo(User::class,'user_id','id');

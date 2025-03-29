@@ -1,6 +1,14 @@
 <div class="modal_status">
     <div class="modal_window">
-
+        <div class="close_btn" onclick="close_dlgs()">
+            <button type="button" class="btn-close">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <h4 class="modal_header">Detail Pesanan</h4>
         <div class="modal_content">
             <div class="customer_info">
                 <div class="info_card">
@@ -90,12 +98,59 @@
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         overflow-y: auto;
-        /* Centering adjustments */
         margin: auto;
         animation: slideUp 0.3s ease;
     }
 
-    /* Rest of your existing CSS styles... */
+    .close_btn {
+        position: absolute;
+        right: 16px;
+        top: 16px;
+        padding: 0;
+        background: none;
+        border: none;
+        cursor: pointer;
+        z-index: 10;
+    }
+
+    .btn-close {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background-color: transparent;
+        border: none;
+        padding: 0;
+        transition: all 0.2s ease;
+    }
+    .modal_header {
+        font-size: 24px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0 0 20px 0;
+        margin-top: auto;
+        text-align: center;
+        padding: 0 20px; /* Menambahkan padding agar posisi tidak terlalu memepet samping */
+    }
+
+    .btn-close:hover {
+        background-color: rgba(231, 76, 60, 0.1);
+    }
+
+    .btn-close svg {
+        width: 20px;
+        height: 20px;
+        color: #7f8c8d;
+        transition: color 0.2s ease;
+        transform: translateY(-5px);
+    }
+
+    .btn-close:hover svg {
+        color: #e74c3c;
+    }
+
     .step_header {
         display: flex;
         flex-direction: column;
@@ -120,25 +175,6 @@
         font-weight: 600;
         color: #2c3e50;
         margin: 0;
-    }
-
-    .close_btn {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #7f8c8d;
-        transition: color 0.2s;
-        padding: 8px;
-        position: absolute;
-        right: 10px;
-        top: 10px;
-        border-radius: 50%;
-    }
-
-    .close_btn:hover {
-        color: #e74c3c;
-        background-color: rgba(231, 76, 60, 0.1);
     }
 
     .modal_content {
@@ -358,4 +394,11 @@
             modal.style.display = 'none';
         }
     });
+
+    function close_dlgs() {
+        const modal = document.querySelector('.modal_status');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
 </script>

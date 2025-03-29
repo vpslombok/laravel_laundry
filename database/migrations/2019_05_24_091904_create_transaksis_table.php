@@ -21,7 +21,7 @@ class CreateTransaksisTable extends Migration
             $table->string('tgl_transaksi');
             $table->string('customer');
             $table->string('email_customer');
-            $table->enum('status_order',['Process','Selesai','DiTerima'])->default('Process');
+            $table->enum('status_order',['Process','Done','DiTerima'])->default('Process');
             $table->enum('status_payment',['Pending','Success']);
             $table->integer('harga_id');
             $table->string('kg');

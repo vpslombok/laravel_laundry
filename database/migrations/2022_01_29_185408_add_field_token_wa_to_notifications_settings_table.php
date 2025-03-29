@@ -15,8 +15,8 @@ class AddFieldTokenWaToNotificationsSettingsTable extends Migration
     {
         Schema::table('notifications_settings', function (Blueprint $table) {
           $table->boolean('wa_order_selesai')->after('telegram_channel_selesai');
-          $table->boolean('wa_api_url')->after('telegram_channel_selesai');
-          $table->boolean('api_key')->after('telegram_channel_selesai');
+          $table->string('wa_api_url', 225)->after('telegram_channel_selesai');
+          $table->string('api_key')->after('telegram_channel_selesai');
         });
     }
 

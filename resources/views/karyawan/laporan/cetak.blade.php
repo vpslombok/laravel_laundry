@@ -96,21 +96,21 @@
         /* QR Code specific styles */
         .qr-container {
             text-align: center;
-            margin: 8px 0;
+            margin: 4px 0;
             page-break-inside: avoid;
         }
 
         .qr-code {
-            width: 25mm;
-            /* Optimal size for thermal printers */
-            height: 25mm;
+            width: 20mm;
+            /* Ukuran optimal untuk printer termal */
+            height: 20mm;
             margin: 0 auto;
             display: block;
         }
 
         .qr-text {
-            font-size: 10px;
-            margin-top: 3px;
+            font-size: 8px;
+            margin-top: 2px;
         }
     </style>
 </head>
@@ -142,7 +142,6 @@
     <div class="info-section">
         <div><span class="info-label">Pelanggan:</span> {{$data->customers->name}}</div>
         <div><span class="info-label">Telp:</span> {{$data->customers->no_telp ?: '-'}}</div>
-        <div><span class="info-label">Alamat:</span> {{$data->customers->alamat}}</div>
     </div>
 
     <div class="divider"></div>
@@ -210,12 +209,11 @@
         <div class="barcode">*{{$data->invoice}}*</div>
         <div class="qr-text">{{$data->invoice}}</div>
         @endif
+        <div class="footer">
+            Terima kasih telah menggunakan layanan kami<br>
+        </div>
     </div>
-
     <!-- Footer -->
-    <div class="footer">
-        Terima kasih telah menggunakan layanan kami<br>
-    </div>
 </body>
 
 </html>
