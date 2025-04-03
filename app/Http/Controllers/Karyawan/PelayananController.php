@@ -16,8 +16,6 @@ use App\Jobs\OrderCustomerJob;
 use App\Notifications\{OrderMasuk, OrderSelesai};
 use GuzzleHttp\Client;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
-use PDF;
-
 
 
 class PelayananController extends Controller
@@ -36,38 +34,25 @@ class PelayananController extends Controller
     return view('karyawan.transaksi.order', compact('order'));
   }
 
-  private function generateNotaImage($order)
-  {
-    // Generate PDF first
-    $pdf = PDF::loadView('karyawan.laporan.cetak', [
-      'invoice' => Transaksi::with('price')->where('id', $order->id)->get(),
-      'data' => $order,
-      'nama_laundry' => PageSettings::where('id', 1)->first()->judul,
-      'qrCode' => base64_encode(QrCode::format('png')->size(120)->generate($order->invoice))
-    ])->setPaper([0, 0, 226.77, 9999], 'portrait'); // 80mm width
+  // private function generateNotaImage($order)
+  // {
+  //   $pdfPath = storage_path('app/public/nota_pdf/' . $order->invoice . '.pdf');
 
-    // Save PDF temporarily
-    $pdfPath = storage_path('app/public/nota_pdf/' . $order->invoice . '.pdf');
-    $pdf->save($pdfPath);
+  //   SnappyPdf::loadView('karyawan.laporan.cetak', [
+  //     'invoice' => Transaksi::with('price')->where('id', $order->id)->get(),
+  //     'data' => $order,
+  //     'nama_laundry' => PageSettings::where('id', 1)->first()->judul,
+  //     'qrCode' => base64_encode(QrCode::format('png')->size(120)->generate($order->invoice))
+  //   ])->setPaper('a4')->save($pdfPath);
 
-    // Convert PDF to Image
-    $imagick = new \Imagick($pdfPath);
-    $imagick->setResolution(300, 300);
-    $imagick->readImage($pdfPath);
-    $imagick->setImageFormat('png');
+  //   // Convert PDF to Image
+  //   $imagePath = storage_path('app/public/invoices/' . $order->invoice . '.png');
+  //   exec("wkhtmltoimage --quality 100 $pdfPath $imagePath");
 
-    // Save image
-    $fileName = 'invoice_' . $order->invoice . '.png';
-    $filePath = storage_path('app/public/invoices/' . $fileName);
-    $imagick->writeImage($filePath);
-    $imagick->clear();
-    $imagick->destroy();
+  //   unlink($pdfPath);
+  //   return asset('storage/invoices/' . $order->invoice . '.png');
+  // }
 
-    // Delete temporary PDF
-    unlink($pdfPath);
-
-    return asset('storage/invoices/' . $fileName);
-  }
 
   public function histori()
   {
@@ -162,13 +147,37 @@ class PelayananController extends Controller
         // Kirim notifikasi via WhatsApp menggunakan API
         try {
           if (setNotificationWhatsappOrderSelesai(1) == 1) {
-            $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-media'; // URL API WhatsApp untuk mengirim media
-            $fileUrl = $this->generateNotaImage($order);
+            $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message'; // URL API WhatsApp untuk mengirim media
+            // $fileUrl = $this->generateNotaImage($order);
+
+            // Prepare WhatsApp message text
+            $message = "*INVOICE " . Auth::user()->nama_cabang . "*\n" .
+              "--------------------------------\n" .
+              "*No Resi*: " . $order->invoice . "\n" .
+              "*Cabang*: " . Auth::user()->nama_cabang . "\n" .
+              "*Telp Cabang*: " . Auth::user()->no_telp . "\n" .
+              "*Alamat*: " . Auth::user()->alamat . "\n\n" .
+              "*Pelanggan*: " . $order->customer . "\n" .
+              "*Telp*: " . $order->customers->no_telp . "\n\n" .
+              "*Layanan*:\n" .
+              "- " . $order->jenis . ": " . $order->kg . " kg × Rp " . number_format($order->harga, 0, ',', '.') . " = *Rp " . number_format(($order->kg * $order->harga), 0, ',', '.') . "*\n\n" .
+              "*Subtotal*: Rp " . number_format(($order->kg * $order->harga), 0, ',', '.') . "\n";
+
+            if ($order->disc > 0) {
+              $message .= "*Diskon (" . $order->disc . "%)*: -Rp " . number_format((($order->kg * $order->harga) * $order->disc / 100), 0, ',', '.') . "\n";
+            }
+
+            $message .= "*TOTAL*: *Rp " . number_format($order->harga_akhir, 0, ',', '.') . "*\n\n" .
+              "*Metode Bayar*: " . $order->jenis_pembayaran . "\n" .
+              "*Tanggal Masuk*: " . Carbon::parse($order->tgl_transaksi)->format('d/m/Y H:i') . "\n" .
+              "*Estimasi Selesai*: " . Carbon::parse($order->tgl_transaksi)->addDays($order->hari)->format('d/m/Y H:i') . "\n\n" .
+              "*Terima kasih telah menggunakan layanan kami.*\n" .
+              "--------------------------------\n" .
+              "*Pesan otomatis, harap tidak dibalas.*";
 
             $data = [
-              'number' =>  $order->customers->no_telp,
-              'message' => "Halo Kak *{$order->customers->name}*, berikut nota transaksi laundry Anda dengan No Resi *{$order->invoice}*. Anda dapat cek status laundry Anda dari website kami di " . url('/') . " maupun WhatsApp Bot kami.",
-              'file_url' => $fileUrl // URL gambar nota
+              'number' => $order->customers->no_telp,
+              'message' => $message,
             ];
 
             $ch = curl_init($waApiUrl);

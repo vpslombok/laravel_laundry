@@ -12,7 +12,7 @@
         "andes2912/indobank": "^0.7.0",
         "barryvdh/laravel-dompdf": "^2.0.0",
         "guzzlehttp/guzzle": "^7.4",
-        "intervention/image": "^3.11",
+        "intervention/image": "*",
         "laravel-notification-channels/telegram": "^2.1",
         "laravel/framework": "^9.0",
         "laravel/tinker": "^2.6.3",
