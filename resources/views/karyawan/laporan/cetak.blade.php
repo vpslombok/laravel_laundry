@@ -3,12 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Invoice Laundry</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&display=swap" rel="stylesheet">
     <style>
+        /* Ukuran kertas 80mm width, auto height */
         @page {
-            size: 80mm 297mm;
+            size: 80mm auto;
             margin: 0;
             padding: 0;
         }
@@ -17,10 +17,9 @@
             font-family: 'Arial Narrow', Arial, sans-serif;
             font-size: 12px;
             margin: 0;
-            padding: 5mm;
-            /* Margin kecil di semua sisi */
-            width: 70mm;
-            /* Lebar konten lebih kecil dari kertas */
+            padding: 2mm;
+            width: 76mm;
+            /* Lebar konten = 80mm - padding kiri/kanan */
             line-height: 1.3;
         }
 
@@ -37,7 +36,6 @@
             font-size: 20px;
             margin-bottom: 3px;
             letter-spacing: 0.5px;
-            /* Memberi kesan lebih tebal */
         }
 
         .subtitle {
@@ -89,20 +87,18 @@
 
         .footer {
             text-align: center;
-            margin-top: 10px;
+            margin-top: 5px;
             font-size: 10px;
         }
 
-        /* QR Code specific styles */
+        /* QR Code */
         .qr-container {
             text-align: center;
             margin: 4px 0;
-            page-break-inside: avoid;
         }
 
         .qr-code {
             width: 20mm;
-            /* Ukuran optimal untuk printer termal */
             height: 20mm;
             margin: 0 auto;
             display: block;
@@ -117,7 +113,6 @@
 
 <body>
     @php
-    // Hitung total sebelum digunakan di view
     $hitung = 0;
     $disc = 0;
     foreach ($invoice as $item) {
@@ -128,10 +123,16 @@
 
     <div class="header">
         <div class="title">{{$nama_laundry}}</div>
-        <div>{{\Carbon\Carbon::parse($data->tgl_transaksi)->format('d/m/Y H:i')}}</div>
+        <div class="qr-container">
+            @if(isset($qrCode))
+            <img class="qr-code" src="data:image/png;base64,{{ $qrCode }}" alt="QR Code Invoice">
+            <div class="subtitle">No Resi #{{$data->invoice}}</div>
+            @endif
+        </div>
     </div>
 
     <div class="info-section">
+        <div><span class="info-label">User:</span> {{$data->user->name}}</div>
         <div><span class="info-label">Cabang:</span> {{$data->user->nama_cabang}}</div>
         <div><span class="info-label">Telp:</span> {{$data->user->no_telp ?: '-'}}</div>
         <div><span class="info-label">Alamat:</span> {{$data->user->alamat_cabang}}</div>
@@ -187,83 +188,21 @@
     <div class="divider"></div>
 
     <div class="info-section">
-        <div><span class="info-label">Pembayaran:</span> {{$data->jenis_pembayaran}}</div>
-        <div><span class="info-label">Tgl Masuk:</span> {{\Carbon\Carbon::parse($data->tgl_transaksi)->format('d/m/Y H:i')}}</div>
+        <div><span class="info-label">Metode Bayar:</span> {{$data->jenis_pembayaran}}</div>
+        <div><span class="info-label">Tanggal Masuk:</span> {{\Carbon\Carbon::parse($data->tgl_transaksi)->format('d/m/Y H:i')}}</div>
         <div><span class="info-label">Estimasi Selesai:</span> {{ \Carbon\Carbon::parse($data->tgl_transaksi)->addDays($data->hari)->format('d/m/Y H:i') }}</div>
+        @if($data->tgl_ambil)
+        <div>
+            <span class="info-label">Tgl Ambil:</span>
+            {{ \Carbon\Carbon::parse($data->tgl_ambil)->format('d/m/Y H:i') }}
+        </div>
+        @endif
     </div>
-    @if($data->tgl_ambil)
-    <div>
-        <span class="info-label">Tgl Ambil:</span>
-        {{ \Carbon\Carbon::parse($data->tgl_ambil)->format('d/m/Y H:i') }}
-    </div>
-    @endif
 
     <div class="divider"></div>
-
-    <!-- QR Code Section -->
-    <div class="qr-container">
-        @if(isset($qrCode))
-        <img class="qr-code" src="data:image/png;base64,{{ $qrCode }}" alt="QR Code Invoice">
-        <div class="subtitle">No Resi #{{$data->invoice}}</div>
-        @else
-        <div class="barcode">*{{$data->invoice}}*</div>
-        <div class="qr-text">{{$data->invoice}}</div>
-        @endif
-        <div class="footer">
-            Terima kasih telah menggunakan layanan kami<br>
-        </div>
+    <div class="footer">
+        **Terima kasih telah menggunakan layanan kami**
     </div>
-    <!-- Footer -->
 </body>
 
 </html>
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Hitung tinggi dokumen dalam piksel
-        let body = document.body;
-        let html = document.documentElement;
-        let height = Math.max(
-            body.scrollHeight,
-            body.offsetHeight,
-            html.clientHeight,
-            html.scrollHeight,
-            html.offsetHeight
-        );
-
-        // Konversi ke milimeter (1px ≈ 0.264583mm)
-        let heightInMM = height * 0.264583;
-
-        // Ambil tinggi kertas A4 standar (297mm) dan hitung jumlah halaman
-        const a4HeightMM = 297; // Tinggi A4 dalam mm
-        const pageCount = Math.ceil(heightInMM / a4HeightMM);
-
-        // Simpan informasi halaman ke cookie (expire 1 menit)
-        let expires = new Date();
-        expires.setTime(expires.getTime() + 60 * 1000);
-        document.cookie = `totalPages=${pageCount}; expires=${expires.toUTCString()}; path=/`;
-
-        console.log(`Dokumen membutuhkan ${pageCount} halaman A4`);
-    });
-</script>
-
-<style>
-    @media print {
-
-        /* Reset margin untuk penggunaan kertas maksimal */
-        @page {
-            size: A4;
-            margin: 0;
-        }
-
-        /* Tambahkan page break jika konten melebihi 1 halaman */
-        .content {
-            page-break-after: always;
-        }
-
-        /* Pastikan body tidak memiliki padding saat cetak */
-        body {
-            padding: 0;
-            margin: 0;
-        }
-    }
-</style>

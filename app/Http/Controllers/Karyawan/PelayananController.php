@@ -16,6 +16,9 @@ use App\Jobs\OrderCustomerJob;
 use App\Notifications\{OrderMasuk, OrderSelesai};
 use GuzzleHttp\Client;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use PDF;
+
+
 
 class PelayananController extends Controller
 
@@ -35,175 +38,35 @@ class PelayananController extends Controller
 
   private function generateNotaImage($order)
   {
-    $fontBold = realpath(public_path('storage/fonts/Poppins-Bold.ttf'));
-    $fontRegular = realpath(public_path('storage/fonts/Poppins-Regular.ttf'));
-    if (!$fontBold || !$fontRegular) {
-      die("Font files not found!");
-    }
+    // Generate PDF first
+    $pdf = PDF::loadView('karyawan.laporan.cetak', [
+      'invoice' => Transaksi::with('price')->where('id', $order->id)->get(),
+      'data' => $order,
+      'nama_laundry' => PageSettings::where('id', 1)->first()->judul,
+      'qrCode' => base64_encode(QrCode::format('png')->size(120)->generate($order->invoice))
+    ])->setPaper([0, 0, 226.77, 9999], 'portrait'); // 80mm width
 
-    // Company Information
-    $companyName = "Maudy Laundry";
-    $branch = "Lombok";
-    $phone = "Telp: 6281990210988";
-    $address = "Lombok Timur NTB";
+    // Save PDF temporarily
+    $pdfPath = storage_path('app/public/nota_pdf/' . $order->invoice . '.pdf');
+    $pdf->save($pdfPath);
 
-    // Customer Information
-    $customer = $order->customers->name;
-    $customerPhone = $order->customers->phone ?? '-';
-    $customerAddress = $order->customers->address ?? '-';
+    // Convert PDF to Image
+    $imagick = new \Imagick($pdfPath);
+    $imagick->setResolution(300, 300);
+    $imagick->readImage($pdfPath);
+    $imagick->setImageFormat('png');
 
-    // Design parameters
-    $maxWidth = 380; // Thermal printer width
-    $margin = 15;
-    $lineSpacing = 20;
-    $sectionSpacing = 15;
-    $posY = 30;
+    // Save image
+    $fileName = 'invoice_' . $order->invoice . '.png';
+    $filePath = storage_path('app/public/invoices/' . $fileName);
+    $imagick->writeImage($filePath);
+    $imagick->clear();
+    $imagick->destroy();
 
-    // Create image
-    $img = imagecreatetruecolor($maxWidth, 1200);
-    $white = imagecolorallocate($img, 255, 255, 255);
-    $black = imagecolorallocate($img, 0, 0, 0);
-    $gray = imagecolorallocate($img, 150, 150, 150);
+    // Delete temporary PDF
+    unlink($pdfPath);
 
-    imagefilledrectangle($img, 0, 0, $maxWidth, 1200, $white);
-
-    // ========== HEADER SECTION ==========
-    // Company Name (centered)
-    $companySize = 16;
-    $companyWidth = imagettfbbox($companySize, 0, $fontBold, $companyName)[2];
-    imagettftext($img, $companySize, 0, ($maxWidth - $companyWidth) / 2, $posY, $black, $fontBold, $companyName);
-    $posY += 25;
-
-    // Date (centered)
-    $dateText = date('d/m/Y H:i', strtotime($order->tgl_transaksi));
-    $dateWidth = imagettfbbox(10, 0, $fontRegular, $dateText)[2];
-    imagettftext($img, 10, 0, ($maxWidth - $dateWidth) / 2, $posY, $black, $fontRegular, $dateText);
-    $posY += 20;
-
-    // Divider line
-    imageline($img, $margin, $posY, $maxWidth - $margin, $posY, $gray);
-    $posY += $sectionSpacing;
-
-    // ========== BRANCH INFO SECTION ==========
-    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Cabang:");
-    imagettftext($img, 10, 0, $margin + 60, $posY, $black, $fontRegular, $branch);
-    $posY += $lineSpacing;
-
-    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Telp:");
-    imagettftext($img, 10, 0, $margin + 60, $posY, $black, $fontRegular, $phone);
-    $posY += $lineSpacing;
-
-    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Alamat:");
-    imagettftext($img, 10, 0, $margin + 60, $posY, $black, $fontRegular, $address);
-    $posY += $sectionSpacing;
-
-    // Divider line
-    imageline($img, $margin, $posY, $maxWidth - $margin, $posY, $gray);
-    $posY += $sectionSpacing;
-
-    // ========== CUSTOMER INFO SECTION ==========
-    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Pelanggan:");
-    imagettftext($img, 10, 0, $margin + 80, $posY, $black, $fontRegular, $customer);
-    $posY += $lineSpacing;
-
-    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Telp:");
-    imagettftext($img, 10, 0, $margin + 80, $posY, $black, $fontRegular, $customerPhone);
-    $posY += $lineSpacing;
-
-    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Alamat:");
-    imagettftext($img, 10, 0, $margin + 80, $posY, $black, $fontRegular, $customerAddress);
-    $posY += $sectionSpacing;
-
-    // Divider line
-    imageline($img, $margin, $posY, $maxWidth - $margin, $posY, $gray);
-    $posY += $sectionSpacing;
-
-    // ========== SERVICE TABLE SECTION ==========
-    // Table Header
-    $col1 = 15;  // Layanan
-    $col2 = 150; // Berat
-    $col3 = 220; // Harga
-    $col4 = 300; // Subtotal
-
-    imagettftext($img, 10, 0, $col1, $posY, $black, $fontBold, "Layanan");
-    imagettftext($img, 10, 0, $col2, $posY, $black, $fontBold, "Berat");
-    imagettftext($img, 10, 0, $col3, $posY, $black, $fontBold, "Harga");
-    imagettftext($img, 10, 0, $col4, $posY, $black, $fontBold, "Subtotal");
-    $posY += $lineSpacing;
-
-    // Service Row
-    $serviceName = harga::where('id', $order->harga_id)->first()->jenis;
-    $weight = $order->kg . " kg";
-    $price = "Rp " . number_format(harga::where('id', $order->harga_id)->first()->harga, 0, ',', '.');
-    $subtotal = "Rp " . number_format($order->harga_akhir, 0, ',', '.');
-
-    imagettftext($img, 10, 0, $col1, $posY, $black, $fontRegular, $serviceName);
-    imagettftext($img, 10, 0, $col2, $posY, $black, $fontRegular, $weight);
-    imagettftext($img, 10, 0, $col3, $posY, $black, $fontRegular, $price);
-    imagettftext($img, 10, 0, $col4, $posY, $black, $fontRegular, $subtotal);
-    $posY += $lineSpacing + 10;
-
-    // Summary
-    imagettftext($img, 10, 0, $col3, $posY, $black, $fontBold, "Subtotal:");
-    imagettftext($img, 10, 0, $col4, $posY, $black, $fontRegular, $subtotal);
-    $posY += $lineSpacing;
-
-    imagettftext($img, 10, 0, $col3, $posY, $black, $fontBold, "Diskon (0%):");
-    imagettftext($img, 10, 0, $col4, $posY, $black, $fontRegular, "-");
-    $posY += $lineSpacing;
-
-    imagettftext($img, 10, 0, $col3, $posY, $black, $fontBold, "TOTAL:");
-    imagettftext($img, 10, 0, $col4, $posY, $black, $fontBold, $subtotal);
-    $posY += $sectionSpacing;
-
-    // Payment Info
-    $paymentStatus = ($order->status_payment == 'Success') ? "Tunai" : "Belum Lunas";
-    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Pembayaran:");
-    imagettftext($img, 10, 0, $margin + 90, $posY, $black, $fontRegular, $paymentStatus);
-    $posY += $lineSpacing;
-
-    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Tgl Masuk:");
-    imagettftext($img, 10, 0, $margin + 90, $posY, $black, $fontRegular, date('d/m/Y H:i', strtotime($order->tgl_transaksi)));
-    $posY += $lineSpacing;
-
-    $completionDate = date('d/m/Y H:i', strtotime($order->tgl_transaksi . ' + ' . $order->hari . ' days'));
-    imagettftext($img, 10, 0, $margin, $posY, $black, $fontBold, "Estimasi Selesai:");
-    imagettftext($img, 10, 0, $margin + 90, $posY, $black, $fontRegular, $completionDate);
-    $posY += $sectionSpacing;
-
-    // Divider line
-    imageline($img, $margin, $posY, $maxWidth - $margin, $posY, $gray);
-    $posY += $sectionSpacing;
-
-    // Invoice Number
-    $invoiceText = "No Resi #" . $order->invoice;
-    $invoiceWidth = imagettfbbox(10, 0, $fontBold, $invoiceText)[2];
-    imagettftext($img, 10, 0, ($maxWidth - $invoiceWidth) / 2, $posY, $black, $fontBold, $invoiceText);
-    $posY += $lineSpacing;
-
-    // Footer
-    $footerText = "Terima kasih telah menggunakan layanan kami";
-    $footerWidth = imagettfbbox(10, 0, $fontRegular, $footerText)[2];
-    imagettftext($img, 10, 0, ($maxWidth - $footerWidth) / 2, $posY, $black, $fontRegular, $footerText);
-    $posY += 30;
-
-    // Crop to actual content height
-    $croppedImg = imagecreatetruecolor($maxWidth, $posY);
-    imagecopy($croppedImg, $img, 0, 0, 0, 0, $maxWidth, $posY);
-    imagedestroy($img);
-
-    // Save the image
-    $fileName = 'nota_' . $order->invoice . '.png';
-    $filePath = storage_path('app/public/nota/' . $fileName);
-
-    if (!file_exists(dirname($filePath))) {
-      mkdir(dirname($filePath), 0777, true);
-    }
-
-    imagepng($croppedImg, $filePath);
-    imagedestroy($croppedImg);
-
-    return asset('storage/nota/' . $fileName);
+    return asset('storage/invoices/' . $fileName);
   }
 
   public function histori()
@@ -248,7 +111,7 @@ class PelayananController extends Controller
       $order->customer        = namaCustomer($order->customer_id);
       $order->email_customer  = email_customer($order->customer_id);
       $order->hari            = $request->hari;
-      $order->kg = (int) $request->kg;
+      $order->kg = (float) $request->kg;
       $order->harga = (int) str_replace(['Rp.', '.', ',', ' '], '', $request->harga);
       $order->disc            = $request->disc;
       $hitung                 = $order->kg * $order->harga;

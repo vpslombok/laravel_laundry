@@ -45,26 +45,12 @@ class InvoiceController extends Controller
 
     // Generate QR Code
     $qrCode = base64_encode(QrCode::format('png')
-      ->size(120) // Reduced size for single page
+      ->size(120)
       ->errorCorrection('H')
       ->generate($data->invoice));
 
-    // Calculate dynamic height based on content
-    $itemCount = count($invoice);
-    $baseHeight = 400; // Base height for minimal content
-    $dynamicHeight = $baseHeight + ($itemCount * 15); // Add 15pt per item
-
-    // Generate PDF
     $pdf = PDF::loadView('karyawan.laporan.cetak', compact('invoice', 'data', 'bank', 'nama_laundry', 'qrCode'))
-      ->setPaper([0, 0, 226.77, $dynamicHeight], 'portrait') // Dynamic height
-      ->setOptions([
-        'margin-top' => 2,
-        'margin-bottom' => 2,
-        'margin-left' => 2,
-        'margin-right' => 2,
-        'isHtml5ParserEnabled' => true,
-        'isRemoteEnabled' => true
-      ]);
+      ->setPaper([0, 0, 226.77, 841.89], 'portrait'); // 80mm width (226.77pt) x unlimited height
 
     return $pdf->stream('invoice-' . $data->invoice . '.pdf');
   }

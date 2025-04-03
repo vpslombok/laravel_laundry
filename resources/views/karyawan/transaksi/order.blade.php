@@ -27,6 +27,7 @@
                         <th>No Resi</th>
                         <th>Tanggal Trx</th>
                         <th>Customer</th>
+                        <th>Total KG</th>
                         <th>Status Laundry</th>
                         <th>Payment</th>
                         <th>Jenis</th>
@@ -41,6 +42,7 @@
                         <td style="font-weight:bold; color:black">{{ $item->invoice }}</td>
                         <td>{{ \Carbon\Carbon::parse($item->tgl_transaksi)->format('d-m-Y') }}</td>
                         <td>{{ $item->customer }}</td>
+                        <td>{{ $item->kg }}</td>
                         <td>
                             <span class="badge bg-{{ $item->status_order == 'Done' ? 'success' : ($item->status_order == 'DiTerima' ? 'warning' : 'danger') }}">
                                 {{ ucfirst($item->status_order) }}
