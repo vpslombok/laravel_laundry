@@ -147,33 +147,35 @@ class PelayananController extends Controller
         // Kirim notifikasi via WhatsApp menggunakan API
         try {
           if (setNotificationWhatsappOrderSelesai(1) == 1) {
-            $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message'; // URL API WhatsApp untuk mengirim media
-            // $fileUrl = $this->generateNotaImage($order);
+            $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message';
+            $nama_laundry = PageSettings::where('id', 1)->first();
 
             // Prepare WhatsApp message text
-            $message = "*INVOICE " . Auth::user()->nama_cabang . "*\n" .
-              "--------------------------------\n" .
+            "═════════════════════\n" .
+              $message = "*" . $nama_laundry->judul . "*\n" .
               "*No Resi*: " . $order->invoice . "\n" .
+              "═════════════════════\n" .
+              "*User*: " . Auth::user()->name . "\n" .
               "*Cabang*: " . Auth::user()->nama_cabang . "\n" .
               "*Telp Cabang*: " . Auth::user()->no_telp . "\n" .
-              "*Alamat*: " . Auth::user()->alamat . "\n\n" .
+              "*Alamat*: " . Auth::user()->alamat_cabang . "\n" .
+              "═════════════════════\n" .
               "*Pelanggan*: " . $order->customer . "\n" .
-              "*Telp*: " . $order->customers->no_telp . "\n\n" .
+              "*Telp*: " . $order->customers->no_telp . "\n" .
+              "═════════════════════\n" .
               "*Layanan*:\n" .
-              "- " . $order->jenis . ": " . $order->kg . " kg × Rp " . number_format($order->harga, 0, ',', '.') . " = *Rp " . number_format(($order->kg * $order->harga), 0, ',', '.') . "*\n\n" .
+              "- " . $jenisPakaian->jenis . ": " . $order->kg . " kg × Rp " . number_format($order->harga, 0, ',', '.') . " = *Rp " . number_format(($order->kg * $order->harga), 0, ',', '.') . "*\n" .
+              "═════════════════════\n" .
               "*Subtotal*: Rp " . number_format(($order->kg * $order->harga), 0, ',', '.') . "\n";
 
-            if ($order->disc > 0) {
-              $message .= "*Diskon (" . $order->disc . "%)*: -Rp " . number_format((($order->kg * $order->harga) * $order->disc / 100), 0, ',', '.') . "\n";
-            }
+            $message .= "*Diskon (" . $order->disc . "%)*: -Rp " . number_format((($order->kg * $order->harga) * $order->disc / 100), 0, ',', '.') . "\n";
 
             $message .= "*TOTAL*: *Rp " . number_format($order->harga_akhir, 0, ',', '.') . "*\n\n" .
+              "*Status Pembayaran*: " . ($order->status_payment == 'Success' ? 'Lunas' : 'Belum Lunas') . "\n" .
               "*Metode Bayar*: " . $order->jenis_pembayaran . "\n" .
               "*Tanggal Masuk*: " . Carbon::parse($order->tgl_transaksi)->format('d/m/Y H:i') . "\n" .
               "*Estimasi Selesai*: " . Carbon::parse($order->tgl_transaksi)->addDays($order->hari)->format('d/m/Y H:i') . "\n\n" .
-              "*Terima kasih telah menggunakan layanan kami.*\n" .
-              "--------------------------------\n" .
-              "*Pesan otomatis, harap tidak dibalas.*";
+              "*Terima kasih telah menggunakan layanan kami.*\n";
 
             $data = [
               'number' => $order->customers->no_telp,
@@ -358,43 +360,39 @@ class PelayananController extends Controller
           $updatedAt = \Carbon\Carbon::parse($transaksi->updated_at);
           $lamaPengerjaan = $createdAt->diffForHumans($updatedAt, true); // Hitung selisih hingga jam, menit, detik
           $jenisLayanan = harga::where('id', $transaksi->harga_id)->first()->jenis;
+          $nama_laundry = PageSettings::where('id', 1)->first();
 
           $data = [
             'number' => $transaksi->customers->no_telp,
-            'message' => "*" . strtoupper(Auth::user()->nama_cabang) . "*\n" .
+            'message' => "*" . $nama_laundry->judul . "*\n" .
               str_repeat("=", 25) . "\n" .
-              "📋 *NOTA ELEKTRONIK*\n" .
-              str_repeat("=", 25) . "\n\n" .
-
-              "📍 *Outlet*:\n" .
-              Auth::user()->nama_cabang . "\n" .
-              Auth::user()->alamat_cabang . "\n" .
-              "📞 " . Auth::user()->no_telp_cabang . "\n\n" .
-
-              str_repeat("-", 25) . "\n" .
-              "🔹 *No. Nota*: " . $transaksi->invoice . "\n" .
-              "👤 *Pelanggan*: " . $transaksi->customers->name . "\n" .
-              "📥 *Tgl Masuk*: " . \Carbon\Carbon::parse($transaksi->created_at)->format('d/m/Y - H:i') . "\n" .
-              "📤 *Estimasi*: " . \Carbon\Carbon::parse($transaksi->estimasi_selesai)->format('d/m/Y - H:i') . "\n" .
-              "⏱ *Lama Kerja*: " . $lamaPengerjaan . "\n\n" .
-
-              str_repeat("-", 25) . "\n" .
-              "🧺 *Detail Layanan*\n" .
-              str_repeat("-", 25) . "\n" .
+              "*informasi Pengambilan*:\n" .
+              "*Nama Cabang*: " . Auth::user()->nama_cabang . "\n" .
+              "*Alamat Cabang*: " . Auth::user()->alamat_cabang . "\n" .
+              "*No Telpon*: " . Auth::user()->no_telp . "\n\n" .
+              str_repeat("=", 25) . "\n" .
+              "*No. Resi*: " . $transaksi->invoice . "\n" .
+              "*Pelanggan*: " . $transaksi->customers->name . "\n" .
+              "*Tgl Masuk*: " . \Carbon\Carbon::parse($transaksi->created_at)->format('d/m/Y - H:i') . "\n" .
+              "*Estimasi*: " . \Carbon\Carbon::parse($transaksi->estimasi_selesai)->format('d/m/Y - H:i') . "\n" .
+              "*Jumlah waktu*: " . $lamaPengerjaan . "\n" .
+              "*Status Laundry*: " . ($transaksi->status_order == 'Done' ? 'Siap diambil' : $transaksi->status_order) . "\n\n" .
+              str_repeat("=", 25) . "\n" .
+              "*Detail Layanan*\n" .
+              str_repeat("=", 25) . "\n" .
               "▪ " . $jenisLayanan . "\n" .
               "▪ " . $transaksi->kg . " Kg × Rp " . number_format($transaksi->harga, 0, ',', '.') . "\n" .
 
-              str_repeat("-", 25) . "\n" .
-              "💳 *Status*: " . ($transaksi->status_payment == 'Success' ? '✅ LUNAS' : '⌛ BELUM BAYAR') . "\n" .
-              "📝 *Catatan*: " . $transaksi->keterangan . "\n\n" .
-
               str_repeat("=", 25) . "\n" .
-              "💰 *RINCIAN BIAYA*\n" .
+              "*Status*: " . ($transaksi->status_payment == 'Success' ? '✅ LUNAS' : '⌛ BELUM LUNAS') . "\n" .
+              "*Metode Pembayaran*: " . $transaksi->jenis_pembayaran . "\n" .
+              str_repeat("=", 25) . "\n" .
+              "*RINCIAN BIAYA*\n" .
               str_repeat("=", 25) . "\n" .
               "Subtotal : Rp " . number_format($transaksi->harga * $transaksi->kg, 0, ',', '.') . "\n" .
               "Diskon   : Rp " . number_format(($transaksi->harga * $transaksi->kg * ($transaksi->diskon ?? 0)) / 100, 0, ',', '.') . "\n" .
-              str_repeat("-", 25) . "\n" .
-              "TOTAL    : Rp " . number_format($transaksi->harga_akhir, 0, ',', '.') . "\n\n" .
+              "TOTAL    : Rp " . number_format($transaksi->harga_akhir, 0, ',', '.') . "\n" .
+              str_repeat("=", 25) . "\n\n" .
 
               "Terima kasih telah menggunakan layanan kami.\n" .
               "Pakaian siap diambil di outlet kami."
