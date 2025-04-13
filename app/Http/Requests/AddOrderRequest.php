@@ -24,7 +24,6 @@ class AddOrderRequest extends FormRequest
     public function rules()
     {
         return [
-          'status_payment'    => 'required',
           'kg'                => 'required|regex:/^[0-9.]+$/|numeric',
           'hari'              => 'required',
           'harga'             => 'required',
@@ -38,7 +37,6 @@ class AddOrderRequest extends FormRequest
     public function messages()
     {
       return [
-        'status_payment.required'   => 'Status Pembayaran wajib dipilih.',
         'kg.required'               => 'Berat Pakaian tidak boleh kosong.',
         'kg.numeric'                => 'Berat Pakaian hanya mendukung angka.',
         'hari.required'             => 'Hari tidak boleh kosong.',

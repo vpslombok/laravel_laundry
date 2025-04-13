@@ -128,13 +128,7 @@
                     <div style="background: white; padding: 10px 15px; border-radius: 5px; display: inline-block;">
                         <i class="fa fa-check-circle" style="color: #28a745;"></i>
                         <span style="margin-left: 5px; font-weight: 500;">{{$data->jenis_pembayaran}}</span>
-                        @foreach($bank as $b)
-                        <div class="bank-info">
-                            <span class="bank-name">{{$b->nama_bank ?? 'Tidak Tersedia'}}-</span>
-                            <span class="bank-account">{{$b->no_rekening ?? 'Tidak Tersedia'}}-</span>
-                            <span class="account-holder">{{$b->nama_pemilik ?? 'Tidak Tersedia'}}</span>
-                        </div>
-                        @endforeach
+                       
                     </div>
                     @else
                     <div style="background: white; padding: 10px 15px; border-radius: 5px; display: inline-block;">

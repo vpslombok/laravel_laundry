@@ -31,22 +31,27 @@ class WebhookController extends Controller
 
         // untuk pesan teks
         if ($message == 'cek status') {
-            $respon = self::text("Input Nomor Resi Untuk Cek Status Laundry Anda...", true);
+            $respon = self::text("Input Nomor Resi Untuk Cek Status Laundry Anda Contoh:123452025 ...", true);
         }
 
         if (strlen($message) == 9 && is_numeric($message)) {
             $nomorInvoice = $message;
             $transaksi = Transaksi::where('invoice', $nomorInvoice)->first();
+            $jenisPakaian = harga::where('id', $transaksi->harga_id)->first();
             if ($transaksi) {
-                $statusOrder = $transaksi->status_order == 'Process' ? 'Proses' : $transaksi->status_order;
+                $statusOrder = $transaksi->status_order;
                 $nameCustomer = $transaksi->customers->name; // get name customer
-                $respon = self::text("Halo Kak *$nameCustomer* 😊\n\n"
-                    . "laundry Kakak dengan *Nomor Resi {$transaksi->invoice}* Berikut detail pesanan:\n\n"
-                    . "📅 *Tanggal*: " . date('d-m-Y', strtotime($transaksi->tgl_transaksi)) . " \n"
-                    . "🕰️ *Jam*: " . date('H:i:s', strtotime($transaksi->tgl_transaksi)) . " \n"
-                    . "🔄 *Status:* " . ($statusOrder == 'Process' ? 'Proses' : ($statusOrder == 'Done' ? 'Selesai' : $statusOrder)) . "\n\n"
-                    . ($transaksi->status_order == 'DiTerima' ? "🚚 *Diterima Pada*: {$transaksi->tgl_ambil}\n\n" : '')
-                    . "Terima kasih sudah menggunakan layanan kami!\n", true);
+                $respon = self::text("👋 Halo Kak *$nameCustomer* 🌟\n\n"
+                    . "Laundry Kakak dengan *Nomor Resi {$transaksi->invoice}* Berikut detailnya:\n\n"
+                    . "📅 *Tanggal*: " . date('d-m-Y', strtotime($transaksi->tgl_transaksi)) . "\n"
+                    . "🕰️ *Jam*: " . date('H:i:s', strtotime($transaksi->tgl_transaksi)) . "\n"
+                    . "👔 *Jenis Layanan*: " . $jenisPakaian->jenis . "\n"
+                    . "🏋️‍♂️ *Berat*: " . $transaksi->kg . " Kg\n"
+                    . "📆 *Estimasi Hari*: " . $transaksi->hari . " Hari\n"
+                    . "🏁 *Estimasi Selesai*: " . date('d-m-Y', strtotime($transaksi->created_at . ' + ' . $transaksi->hari . ' days')) . "\n"
+                    . "📝 *Status:* " . ($statusOrder == 'Process' ? 'Sedang Diproses' : ($statusOrder == 'Done' ? 'Siap Diambil' : $statusOrder)) . "\n\n"
+                    . ($transaksi->status_order == 'DiTerima' ? "📦 *Diterima Pada*: {$transaksi->tgl_ambil}\n\n" : '')
+                    . "🙏 Terima kasih sudah menggunakan layanan kami! 🌈", true);
             } else {
                 $respon = self::text("Mohon Maaf Kak {name}, nomor Resi $nomorInvoice tidak ditemukan di sistem kami. 🙏", true);
             }
@@ -78,8 +83,8 @@ class WebhookController extends Controller
                         // Menentukan status order
                         $statusOrder = match ($laundry->status_order) {
                             'Process' => 'Sedang Diproses',
-                            'Done' => 'Selesai',
-                            'DiTerima' => 'Telah Diterima',
+                            'Done' => 'Siap Diambil',
+                            'DiTerima' => 'Telah Diambil',
                             default => 'Status Tidak Diketahui',
                         };
 

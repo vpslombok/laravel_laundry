@@ -26,6 +26,7 @@
                         <th>#</th>
                         <th>No Resi</th>
                         <th>Tanggal Trx</th>
+                        <th>Estimasi Selesai</th>
                         <th>Customer</th>
                         <th>Total KG</th>
                         <th>Status Laundry</th>
@@ -41,6 +42,7 @@
                         <td>{{ $index + 1 }}</td>
                         <td style="font-weight:bold; color:black">{{ $item->invoice }}</td>
                         <td>{{ \Carbon\Carbon::parse($item->tgl_transaksi)->format('d-m-Y') }}</td>
+                        <td>{{ \Carbon\Carbon::parse($item->created_at)->addDays($item->hari)->format('d-m-Y') }}</td>
                         <td>{{ $item->customer }}</td>
                         <td>{{ $item->kg }}</td>
                         <td>

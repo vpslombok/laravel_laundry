@@ -123,6 +123,7 @@
                                 <th width="5%">No</th>
                                 <th>Tanggal</th>
                                 <th class="text-right">Pemasukan</th>
+                                <th class="text-right">Total (KG)</th>
                                 <th class="text-right">Pengeluaran</th>
                                 <th class="text-right">Laba</th>
                                 <th width="10%">Aksi</th>
@@ -134,6 +135,7 @@
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ date('d M Y', strtotime($laba['tanggal'])) }}</td>
                                 <td class="text-right">{{ formatRupiah($laba['pemasukan']) }}</td>
+                                <td class="text-right">{{ $laba['total_kg'] }} kg</td>
                                 <td class="text-right">{{ formatRupiah($laba['pengeluaran']) }}</td>
                                 <td class="text-right font-weight-bold 
                                     {{ $laba['laba'] >= 0 ? 'text-success' : 'text-danger' }}">
@@ -224,14 +226,12 @@
                     // Populate pemasukan (transactions)
                     if (response.transaksi && response.transaksi.length > 0) {
                         let html = '<table class="table table-sm">';
-                        html += '<thead><tr><th>Customer</th><th>Jenis</th><th class="text-right">Berat</th><th class="text-right">Total</th></tr></thead>';
+                        html += '<thead><tr><th class="text-right">Berat</th><th class="text-right">Total</th></tr></thead>';
                         html += '<tbody>';
                         response.transaksi.forEach(item => {
                             html += `<tr>
-                                <td>${item.customer ? item.customer.name : '-'}</td>
-                                <td>${item.jenis}</td>
                                 <td class="text-right">${item.kg} kg</td>
-                                <td class="text-right">${formatRupiah(item.harga_akhir)}</td>
+                                <td class="text-right">${formatRupiah(item.harga_akhir, true)}</td>
                             </tr>`;
                         });
                         html += `<tr class="bg-light">

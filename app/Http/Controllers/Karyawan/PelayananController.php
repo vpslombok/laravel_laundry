@@ -18,6 +18,8 @@ use GuzzleHttp\Client;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 
+
+
 class PelayananController extends Controller
 
 {
@@ -28,7 +30,7 @@ class PelayananController extends Controller
     $order = transaksi::with('price')
       ->where('user_id', Auth::user()->id)
       ->where('status_order', '!=', 'DiTerima')
-      ->orderBy('id', 'DESC')
+      ->orderByRaw('DATEDIFF(NOW(), created_at) >= hari')
       ->get();
 
     return view('karyawan.transaksi.order', compact('order'));
@@ -100,6 +102,7 @@ class PelayananController extends Controller
       $order->harga = (int) str_replace(['Rp.', '.', ',', ' '], '', $request->harga);
       $order->disc            = $request->disc;
       $hitung                 = $order->kg * $order->harga;
+
       if ($request->disc != NULL) {
         $disc                = ($hitung * $order->disc) / 100;
         $total               = $hitung - $disc;
@@ -107,21 +110,92 @@ class PelayananController extends Controller
       } else {
         $order->harga_akhir    = $hitung;
       }
+
       $order->jenis_pembayaran  = $request->jenis_pembayaran;
       $order->tgl               = Carbon::now()->day;
       $order->bulan             = Carbon::now()->month;
       $order->tahun             = Carbon::now()->year;
+
+      // Jika pembayaran transfer, status awal belum dibayar
+      if ($request->jenis_pembayaran == 'Transfer') {
+        $order->status_payment = 'Pending';
+      }
+
       $order->save();
 
       if ($order) {
+        // Jika metode pembayaran transfer, proses Midtrans
+        if ($request->jenis_pembayaran == 'Transfer') {
+          // Konfigurasi Midtrans
+          \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+          \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+          \Midtrans\Config::$isSanitized = true;
+          \Midtrans\Config::$is3ds = true;
+
+          // Data untuk Midtrans
+          $params = [
+            'transaction_details' => [
+              'order_id' => $order->invoice,
+              'gross_amount' => $order->harga_akhir,
+            ],
+            'customer_details' => [
+              'first_name' => $order->customer,
+              'email' => $order->email_customer,
+              'phone' => $order->customers->no_telp,
+            ],
+            'enabled_payments' => [
+              'credit_card',
+              'gopay',
+              'shopeepay',
+              'bank_transfer',
+              'bca_klikbca',
+              'bca_klikpay',
+              'bri_epay',
+              'cimb_clicks',
+              'danamon_online', 
+              'akulaku',
+              'echannel',
+              'indomaret',
+              'alfamart',
+              'kredivo',
+              'uob_ezpay'
+            ],
+            'expiry' => [
+              'start_time' => date('Y-m-d H:i:s T'),
+              'unit' => 'days',
+              'duration' => 1
+            ]
+          ];
+
+          try {
+            // Dapatkan Snap URL
+            $snapUrl = \Midtrans\Snap::createTransaction($params)->redirect_url;
+
+            // Simpan snap URL ke database
+            $order->snap_url = $snapUrl;
+            $order->save();
+
+            // // Kirim link pembayaran via WhatsApp/Email
+            // $this->sendPaymentLink($order, $snapUrl);
+
+            // Simpan respons ke log
+            \Log::info('Order berhasil dibuat dan link pembayaran telah dikirim. Order ID: ' . $order->id);
+          } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Gagal membuat transaksi Midtrans: ' . $e->getMessage());
+            Session::flash('error', 'Gagal membuat transaksi Midtrans: ' . $e->getMessage());
+            return redirect()->back();
+          }
+        }
+
         // Notification Telegram
         if (setNotificationTelegramIn(1) == 1) {
           $order->notify(new OrderMasuk());
+          \Log::info('Notifikasi Telegram untuk order baru telah dikirim. Order ID: ' . $order->id);
         }
 
         // Notification email
         if (setNotificationEmail(1) == 1) {
-          // Menyiapkan data Email
           $bank = DataBank::get();
           $jenisPakaian = harga::where('id', $order->harga_id)->first();
           $data = array(
@@ -137,11 +211,12 @@ class PelayananController extends Controller
             'total'         => $order->kg * $order->harga,
             'harga_akhir'   => $order->harga_akhir,
             'laundry_name'  => Auth::user()->nama_cabang,
-            'bank'          => $bank
+            'bank'          => $bank,
+            'snap_url'      => $order->snap_url ?? null
           );
 
-          // Kirim Email
           dispatch(new OrderCustomerJob($data));
+          \Log::info('Notifikasi email untuk order baru telah dikirim. Order ID: ' . $order->id);
         }
 
         // Kirim notifikasi via WhatsApp menggunakan API
@@ -150,9 +225,7 @@ class PelayananController extends Controller
             $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message';
             $nama_laundry = PageSettings::where('id', 1)->first();
 
-            // Prepare WhatsApp message text
-            "═════════════════════\n" .
-              $message = "*" . $nama_laundry->judul . "*\n" .
+            $message = "*" . $nama_laundry->judul . "*\n" .
               "*No Resi*: " . $order->invoice . "\n" .
               "═════════════════════\n" .
               "*User*: " . Auth::user()->name . "\n" .
@@ -174,8 +247,14 @@ class PelayananController extends Controller
               "*Status Pembayaran*: " . ($order->status_payment == 'Success' ? 'Lunas' : 'Belum Lunas') . "\n" .
               "*Metode Bayar*: " . $order->jenis_pembayaran . "\n" .
               "*Tanggal Masuk*: " . Carbon::parse($order->tgl_transaksi)->format('d/m/Y H:i') . "\n" .
-              "*Estimasi Selesai*: " . Carbon::parse($order->tgl_transaksi)->addDays($order->hari)->format('d/m/Y H:i') . "\n\n" .
-              "*Terima kasih telah menggunakan layanan kami.*\n";
+              "*Estimasi Selesai*: " . Carbon::parse($order->tgl_transaksi)->addDays($order->hari)->format('d/m/Y H:i') . "\n\n";
+
+            // Tambahkan link pembayaran jika ada
+            if ($order->jenis_pembayaran == 'Transfer' && isset($order->snap_url)) {
+              $message .= "*Link Pembayaran*: " . $order->snap_url . "\n\n";
+            }
+
+            $message .= "*Terima kasih telah menggunakan layanan kami.*\n";
 
             $data = [
               'number' => $order->customers->no_telp,
@@ -195,25 +274,71 @@ class PelayananController extends Controller
             } else {
               $responseData = json_decode($response, true);
               if (!isset($responseData['status']) || $responseData['status'] !== 'success') {
-                Session::flash('error', 'Respon API : ' . json_encode($responseData));
               }
             }
           }
 
           DB::commit();
-          Session::flash('success', 'Order Berhasil Ditambah!');
-          return redirect('pelayanan');
+          return redirect()->back()->with([
+            'success' => 'Transaksi berhasil disimpan',
+            'transaction_id' => $order->id
+        ]);
         } catch (Exception $e) {
           DB::rollBack();
-          Session::flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
-          return redirect()->back();
-        };
+          return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
       }
     } catch (ErrorException $e) {
       DB::rollback();
       throw new ErrorException($e->getMessage());
     }
   }
+
+  // private function sendPaymentLink($order, $snapUrl)
+  // {
+  //   // Kirim via WhatsApp
+  //   if (setNotificationWhatsappOrderSelesai(1) == 1) {
+  //     $waApiUrl = notifications_setting::where('id', 1)->first()->wa_api_url . '/send-message';
+
+  //     $paymentMessage = "Halo " . $order->customer . ",\n\n" .
+  //       "Berikut link pembayaran untuk pesanan Anda:\n" .
+  //       "Invoice: " . $order->invoice . "\n" .
+  //       "Total: Rp " . number_format($order->harga_akhir, 0, ',', '.') . "\n" .
+  //       "Link Pembayaran: " . $order->snap_url . "\n\n" .
+  //       "Silakan selesaikan pembayaran dalam 2x24 jam.\n" .
+  //       "Terima kasih.";
+
+  //     $data = [
+  //       'number' => $order->customers->no_telp,
+  //       'message' => $paymentMessage,
+  //     ];
+
+  //     $ch = curl_init($waApiUrl);
+  //     curl_setopt($ch, CURLOPT_POST, 1);
+  //     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+  //     curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+  //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  //     curl_exec($ch);
+  //     curl_close($ch);
+
+  //     \Log::info('Link pembayaran telah dikirim ke WhatsApp. Order ID: ' . $order->id);
+  //   }
+
+  // // Kirim via Email
+  // if (setNotificationEmail(1) == 1) {
+  //   $data = [
+  //     'email' => $order->email_customer,
+  //     'invoice' => $order->invoice,
+  //     'customer' => $order->customer,
+  //     'harga_akhir' => $order->harga_akhir,
+  //     'snap_url' => $order->snap_url,
+  //     'is_payment_link' => true
+  //   ];
+
+  //   dispatch(new OrderCustomerJob($data));
+  //   \Log::info('Link pembayaran telah dikirim ke email. Order ID: ' . $order->id);
+  // }
+  // }
 
   // Tambah Order
   public function addorders()

@@ -101,6 +101,8 @@ Route::middleware('auth')->group(function () {
     Route::get('listharga', 'Karyawan\PelayananController@listharga');
     Route::get('listhari', 'Karyawan\PelayananController@listhari');
     Route::get('total-harga', 'Karyawan\PelayananController@totalHarga');
+    Route::get('payment-methods', 'Karyawan\PelayananController@listPaymentMethods')->name('payment.methods');
+
     // customer name
     Route::get('getCustomerName', 'Karyawan\PelayananController@getCustomerName');
     // Laporan

@@ -3,13 +3,6 @@
 @section('content')
 @if (@$cek_harga->user_id == !null || @$cek_harga->user_id == Auth::user()->id)
 
-@if($message = Session::get('error'))
-<div class="alert alert-danger alert-block">
-  <button type="button" class="close" data-dismiss="alert">×</button>
-  <strong>{{ $message }}</strong>
-</div>
-@endif
-
 <div class="card card-outline-info">
   <div class="card-header">
     <h4 class="card-title">Form Transaksi Order Masuk
@@ -132,14 +125,13 @@
         </div>
 
         <div class="row">
-
           <div class="col-md-3">
             <div class="form-group has-success">
               <label class="control-label">Jenis Pembayaran</label>
-              <select class="form-control custom-select @error('jenis_pembayaran') is-invalid @enderror" name="jenis_pembayaran">
+              <select id="jenis-pembayaran" class="form-control custom-select @error('jenis_pembayaran') is-invalid @enderror" name="jenis_pembayaran">
                 <option value="">-- Pilih Jenis Pembayaran --</option>
-                <option value="Tunai" {{old('jenis_pembayaran' == 'Tunai' ? 'selected' : '')}}>Tunai</option>
-                <option value="Transfer" {{old('jenis_pembayaran' == 'Transfer' ? 'selected' : '')}}>Transfer</option>
+                <option value="Tunai" {{ old('jenis_pembayaran') == 'Tunai' ? 'selected' : '' }}>Tunai</option>
+                <option value="Transfer" {{ old('jenis_pembayaran') == 'Transfer' ? 'selected' : '' }}>Transfer</option>
               </select>
               @error('jenis_pembayaran')
               <span class="invalid-feedback text-danger" role="alert">
@@ -148,21 +140,25 @@
               @enderror
             </div>
           </div>
-          <div class="col-md-3">
+
+          <div id="status-pembayaran-container" class="col-md-3">
             <div class="form-group has-success">
               <label class="control-label">Status Pembayaran</label>
-              <select class="form-control custom-select @error('status_payment') is-invalid @enderror" name="status_payment">
-                <option value="">-- Pilih Status Payment --</option>
-                <option value="Pending" {{old('status_payment') == 'Pending' ? 'selected' : ''}}>Belum Dibayar</option>
-                <option value="Success" {{old('status_payment') == 'Success' ? 'selected' : ''}}>Sudah Dibayar</option>
+              <select class="form-control custom-select @if(old('jenis_pembayaran') != 'Transfer') @error('status_payment') is-invalid @enderror @endif" name="status_payment" id="status-payment-select">
+                <option value="Pending" {{ old('status_payment') == 'Pending' ? 'selected' : '' }}>Belum Dibayar</option>
+                <option value="Success" {{ old('status_payment') == 'Success' ? 'selected' : '' }}>Sudah Dibayar</option>
               </select>
+              @if(old('jenis_pembayaran') != 'Transfer')
               @error('status_payment')
-              <span class="invalid-feedback text-danger" role="alert">
+              <span class="invalid-feedback text-danger" role="alert" id="status-payment-error">
                 <strong>{{ $message }}</strong>
               </span>
               @enderror
+              @endif
             </div>
           </div>
+
+          <input type="hidden" name="status_payment_hidden" id="status-payment-hidden" value="Pending">
         </div>
 
         <input type="hidden" name="tgl">
@@ -203,6 +199,24 @@
       clearTimeout(window.updateDataTimeout);
       window.updateDataTimeout = setTimeout(updateData, 300);
     });
+  });
+  $(document).ready(function() {
+    // Sembunyikan/tampilkan status pembayaran berdasarkan jenis pembayaran
+    $('#jenis-pembayaran').change(function() {
+      if ($(this).val() === 'Transfer') {
+        $('#status-pembayaran-container').hide();
+        $('#status-payment-hidden').val('Pending');
+      } else {
+        $('#status-pembayaran-container').show();
+        $('#status-payment-hidden').val('');
+      }
+    });
+
+    // Jalankan saat halaman pertama kali dimuat
+    if ($('#jenis-pembayaran').val() === 'Transfer') {
+      $('#status-pembayaran-container').hide();
+      $('#status-payment-hidden').val('Pending');
+    }
   });
 
   // Fungsi untuk memperbarui data harga, lama hari, dan total harga
@@ -289,10 +303,40 @@
             icon: 'error',
             title: 'Gagal...',
             text: message, // Tampilkan pesan error dari server
+          }).then(() => {
+            // Bersihkan form input setelah alert selesai
+            $('form').find('input[type=text], textarea').val('');
           });
         }
       }
     });
   }
 </script>
+@if($success = Session::get('success'))
+<div id="success-message" data-transaction-id="{{ Session::get('transaction_id') }}"></div>
+<script>
+  Swal.fire({
+    icon: 'success',
+    title: 'Berhasil...',
+    text: '{{ $success }}',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, cetak nota',
+    cancelButtonText: 'Tidak, tutup',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      var transactionId = document.getElementById('success-message').getAttribute('data-transaction-id');
+      window.location.href = '/cetak-invoice/' + transactionId + '/print';
+    }
+  });
+</script>
+@endif
+@if($success = Session::get('erorr'))
+<script>
+  Swal.fire({
+    icon: 'error',
+    title: 'Gagal...',
+    text: '{{ $error }}',
+  })
+</script>
+@endif
 @endsection

@@ -19,3 +19,4 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 });
 
 Route::post('/webhook', [WebhookController::class, 'handleWebhook']);
+Route::post('/payment-callback', 'PaymentController@handleCallback');

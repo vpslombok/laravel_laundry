@@ -238,8 +238,18 @@ class FinanceController extends Controller
   // halaman report laba
   public function laba(Request $request)
   {
-    $tanggal_awal = $request->get('tanggal_awal') ?? Carbon::now()->subMonth()->format('Y-m-d');
+    $tanggal_awal = $request->get('tanggal_awal') ?? Carbon::now()->startOfMonth()->format('Y-m-d');
     $tanggal_akhir = $request->get('tanggal_akhir') ?? Carbon::now()->format('Y-m-d');
+
+    if ($tanggal_akhir > Carbon::now()->format('Y-m-d')) {
+      Session::flash('error', 'Tanggal akhir tidak boleh melebihi tanggal yang berjalan');
+      return back()->withInput();
+    }
+
+    if ($tanggal_awal > $tanggal_akhir) {
+      Session::flash('error', 'Tanggal awal tidak boleh lebih besar dari tanggal akhir');
+      return back()->withInput();
+    }
 
     // Get all dates between the range
     $dates = [];
@@ -258,6 +268,9 @@ class FinanceController extends Controller
       $pemasukan = transaksi::where('status_payment', 'Success')
         ->whereDate('created_at', $date)
         ->sum('harga_akhir');
+      $total_kg = transaksi::where('status_payment', 'Success')
+        ->whereDate('created_at', $date)
+        ->sum('kg');
 
       // Get expenses for the day
       $pengeluaran = pengeluaran::whereDate('tanggal', $date)
@@ -269,6 +282,7 @@ class FinanceController extends Controller
         $reportData[] = [
           'tanggal' => $date,
           'pemasukan' => $pemasukan,
+          'total_kg' => $total_kg,
           'pengeluaran' => $pengeluaran,
           'laba' => $laba,
           'transaksi' => Transaksi::where('status_payment', 'Success')
