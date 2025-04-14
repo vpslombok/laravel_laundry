@@ -7,7 +7,7 @@
         <div class="panel panel-forum">
           <div class="panel-heading">
               <h4 class="panel-title" style="font-weight:bold; color:black; font-size:15px">
-                  Order Online
+                  Cek Status Online
               </h4>
           </div>
           <img :src="'frontend/img/order.png'" style="width: 100%; max-height:230px; min-height:230px" alt="">

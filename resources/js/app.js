@@ -21,7 +21,7 @@ import Vue from 'vue'
 
 // Vue.component('example-component', require('./components/ExampleComponent.vue').default);
 Vue.component('contenone', require('./components/Contentone.vue').default);
-Vue.component('contentwo', require('./components/Contentwo.vue').default);
+Vue.component('contentwo', require('./components/contentwo.vue').default);
 
 /**
  * Next, we will create a fresh Vue application instance and attach it to

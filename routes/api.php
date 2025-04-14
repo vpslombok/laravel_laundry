@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\WebhookController;
-
+use App\Http\Controllers\api\AuthController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -20,3 +20,7 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 
 Route::post('/webhook', [WebhookController::class, 'handleWebhook']);
 Route::post('/payment-callback', 'PaymentController@handleCallback');
+
+Route::post('login', [AuthController::class, 'login'])->name('auth.login');
+Route::post('register', [AuthController::class, 'register'])->name('auth.register');
+Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');

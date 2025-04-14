@@ -11,7 +11,7 @@
               Solusi Pakaian Kotor Ingat kami !
             </h1>
             <h3 class="text-center">
-              Tunggu aja dirumah, biar kurir kami yang jemput dan antar pakaian kotor kamu :)
+              Kami menerima pakaian kotor Anda, silakan bawa ke tempat kami untuk proses laundry :)
             </h3>
         </div>
         </div>
